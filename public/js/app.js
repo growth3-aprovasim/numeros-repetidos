@@ -690,7 +690,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (esp.qrCodeDataUrl) {
             modalQrStatusPill.textContent = 'Aguardando Escaneamento';
             modalQrStatusPill.className = 'status-pill-espiao waiting';
-            modalQrImgWrap.innerHTML = `<img src="${esp.qrCodeDataUrl}" alt="QR Code WhatsApp" class="qr-image" />`;
+            const imgExistente = modalQrImgWrap.querySelector('img.qr-image');
+            if (imgExistente) {
+                if (imgExistente.src !== esp.qrCodeDataUrl) {
+                    imgExistente.src = esp.qrCodeDataUrl;
+                }
+            } else {
+                modalQrImgWrap.innerHTML = `<img src="${esp.qrCodeDataUrl}" alt="QR Code WhatsApp" class="qr-image" />`;
+            }
         } else if (esp.erroMsg) {
             modalQrStatusPill.textContent = 'Erro ao gerar';
             modalQrStatusPill.className = 'status-pill-espiao disconnected';

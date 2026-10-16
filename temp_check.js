@@ -1,31 +1,31 @@
-const fs = require('fs');
+const { default: makeWASocket, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const path = require('path');
-const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+const fs = require('fs');
 const pino = require('pino');
 
 async function test() {
-    const pastaAuth = path.join(__dirname, 'auth_sniper_1');
-    const { state } = await useMultiFileAuthState(pastaAuth);
+    const pasta = path.join(__dirname, 'auth_test_pairing');
+    if (fs.existsSync(pasta)) fs.rmSync(pasta, { recursive: true, force: true });
+    fs.mkdirSync(pasta, { recursive: true });
+
+    const { state, saveCreds } = await useMultiFileAuthState(pasta);
+    const { version } = await fetchLatestBaileysVersion();
+
     const sock = makeWASocket({
+        version,
         auth: state,
-        logger: pino({ level: 'silent' }),
-        syncFullHistory: false
+        logger: pino({ level: 'debug' }),
+        browser: Browsers.windows('Desktop'),
+        printQRInTerminal: true
     });
 
-    sock.ev.on('connection.update', async ({ connection }) => {
-        if (connection === 'open') {
-            const all = await sock.groupFetchAllParticipating();
-            const blackGroups = Object.values(all).filter(g => /black|vital[ií]cia/i.test(g.subject));
+    sock.ev.on('creds.update', saveCreds);
 
-            for (const g of blackGroups) {
-                for (const p of (g.participants || [])) {
-                    if (JSON.stringify(p).includes('46751541117170')) {
-                        console.log('ENCONTRADO:', g.subject, p);
-                    }
-                }
-            }
-            process.exit(0);
-        }
+    sock.ev.on('connection.update', (update) => {
+        console.log('EVENT connection.update:', Object.keys(update));
+        if (update.qr) console.log('QR length:', update.qr.length);
+        if (update.connection) console.log('Connection status:', update.connection);
+        if (update.lastDisconnect) console.log('LastDisconnect:', update.lastDisconnect?.error);
     });
 }
-test().catch(e => { console.error(e); process.exit(1); });
+test();

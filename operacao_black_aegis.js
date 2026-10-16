@@ -430,8 +430,13 @@ async function conectarSniper(indice) {
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'silent' }),
-            browser: Browsers.ubuntu('Chrome'),
-            syncFullHistory: false
+            browser: Browsers.windows('Desktop'),
+            markOnlineOnConnect: true,
+            generateHighQualityLinkPreview: true,
+            syncFullHistory: false,
+            defaultQueryTimeoutMs: undefined,
+            connectTimeoutMs: 60_000,
+            getMessage: async () => ({ conversation: '' })
         });
 
         sock.ev.on('creds.update', saveCreds);
@@ -560,8 +565,13 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.ubuntu('Chrome'),
-        syncFullHistory: false
+        browser: Browsers.windows('Desktop'),
+        markOnlineOnConnect: true,
+        generateHighQualityLinkPreview: true,
+        syncFullHistory: false,
+        defaultQueryTimeoutMs: undefined,
+        connectTimeoutMs: 60_000,
+        getMessage: async () => ({ conversation: '' })
     });
 
     sock.ev.on('creds.update', saveCreds);
