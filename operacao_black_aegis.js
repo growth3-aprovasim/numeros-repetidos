@@ -2,7 +2,8 @@
 // 🛡️ MOTOR AEGIS: OPERAÇÃO BLACK VITALÍCIA & DESAFIO BASE FORTE
 // Monitoramento unificado dos dois ecossistemas (56 grupos no total)
 // 1. Limpeza inicial retroativa (Black primeiro, depois Base Forte)
-// 2. Sentinela Catraca em Tempo Real 24/7 (Permitido até 4 grupos por campanha, 5+ = expulsão)
+// 2. Sentinela Catraca em Tempo Real 24/7 (Saturação configurável + Ban Permanente)
+// 3. Gestão Centralizada de Administradores / ADMs (QR Code & Pairing Code via Web)
 // =====================================================================
 const {
     default: makeWASocket,
@@ -15,6 +16,7 @@ const {
 const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
+const qrcode = require('qrcode');
 
 // =====================================================================
 // 🤫 SILENCIADOR DE RUÍDOS DE PROTOCOLO SIGNAL/BAILEYS
@@ -51,13 +53,65 @@ process.on('uncaughtException', err => { if (!silenciador([err])) console.error(
 process.on('unhandledRejection', err => { if (!silenciador([err])) console.error('\n[💀 REJEIÇÃO NÃO TRATADA]', err?.message || err); });
 
 // =====================================================================
-// ⚙️ CONFIGURAÇÕES & ARQUIVOS
+// ⚙️ CONFIGURAÇÕES & ARQUIVOS PERSISTENTES
 // =====================================================================
+const ARQUIVO_CONFIG = path.join(__dirname, 'config_aegis.json');
 const ARQUIVO_WHITELIST = path.join(__dirname, 'whitelist_aegis.json');
+const ARQUIVO_BLACKLIST = path.join(__dirname, 'blacklist_aegis.json');
 const ARQUIVO_LOG = path.join(__dirname, 'log_operacao_aegis.json');
-const QTD_SNIPERS = 4;
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+function carregarConfig() {
+    try {
+        if (!fs.existsSync(ARQUIVO_CONFIG)) {
+            const padrao = {
+                limiteGruposPorCampanha: 4,
+                quantidadeAdms: 4,
+                quantidadeEspioes: 4,
+                quantidadeSnipers: 4,
+                limiteBanPermanente: 10
+            };
+            fs.writeFileSync(ARQUIVO_CONFIG, JSON.stringify(padrao, null, 2), 'utf-8');
+            return padrao;
+        }
+        const cfg = JSON.parse(fs.readFileSync(ARQUIVO_CONFIG, 'utf-8'));
+        const qtdAdms = Number(cfg.quantidadeAdms || cfg.quantidadeEspioes || cfg.quantidadeSnipers) || 4;
+        return {
+            limiteGruposPorCampanha: Number(cfg.limiteGruposPorCampanha) || 4,
+            quantidadeAdms: qtdAdms,
+            quantidadeEspioes: qtdAdms,
+            quantidadeSnipers: qtdAdms,
+            limiteBanPermanente: Number(cfg.limiteBanPermanente) || 10
+        };
+    } catch (e) {
+        return {
+            limiteGruposPorCampanha: 4,
+            quantidadeAdms: 4,
+            quantidadeEspioes: 4,
+            quantidadeSnipers: 4,
+            limiteBanPermanente: 10
+        };
+    }
+}
+
+let configAtual = carregarConfig();
+
+function salvarConfig(novaConfig) {
+    const atual = carregarConfig();
+    const qtdAdms = Number(novaConfig.quantidadeAdms !== undefined ? novaConfig.quantidadeAdms : (novaConfig.quantidadeEspioes !== undefined ? novaConfig.quantidadeEspioes : atual.quantidadeAdms));
+    const merged = {
+        limiteGruposPorCampanha: Number(novaConfig.limiteGruposPorCampanha !== undefined ? novaConfig.limiteGruposPorCampanha : atual.limiteGruposPorCampanha),
+        quantidadeAdms: qtdAdms,
+        quantidadeEspioes: qtdAdms,
+        quantidadeSnipers: qtdAdms,
+        limiteBanPermanente: Number(novaConfig.limiteBanPermanente !== undefined ? novaConfig.limiteBanPermanente : atual.limiteBanPermanente)
+    };
+    fs.writeFileSync(ARQUIVO_CONFIG, JSON.stringify(merged, null, 2), 'utf-8');
+    configAtual = merged;
+    adicionarEventoFeed('CONFIG', `⚙️ Configurações salvas: Limite Grupos = ${merged.limiteGruposPorCampanha} | Ban Permanente = >${merged.limiteBanPermanente} links | ADMs Ativos = ${merged.quantidadeAdms}`);
+    return merged;
+}
 
 function identificarCampanha(subject) {
     if (!subject) return null;
@@ -66,8 +120,21 @@ function identificarCampanha(subject) {
     return null;
 }
 
+function formatarExibicao(num) {
+    if (!num) return '';
+    const limpo = String(num).replace(/\D/g, '');
+    if (limpo.startsWith('55') && limpo.length === 13) {
+        return `+55 (${limpo.substring(2, 4)}) ${limpo.substring(4, 9)}-${limpo.substring(9)}`;
+    }
+    if (limpo.startsWith('55') && limpo.length === 12) {
+        return `+55 (${limpo.substring(2, 4)}) ${limpo.substring(4, 8)}-${limpo.substring(8)}`;
+    }
+    if (limpo.length >= 11) return `+${limpo}`;
+    return limpo;
+}
+
 // =====================================================================
-// 🔍 FUNÇÕES DE IDENTIDADE E WHITELIST
+// 🔍 FUNÇÕES DE IDENTIDADE E WHITELIST (EQUIPE IMUNE)
 // =====================================================================
 function extrairNumeroLimpo(jid) {
     if (!jid) return "";
@@ -125,12 +192,90 @@ function estaNaWhitelist(numOuJid, frotaSnipers = []) {
 }
 
 // =====================================================================
-// 🚀 GERENCIADOR DE CONEXÃO MULTI-SNIPER
+// ⛔ GESTÃO DE BLACKLIST (BANIDOS PERMANENTES)
+// =====================================================================
+function carregarBlacklist() {
+    try {
+        if (!fs.existsSync(ARQUIVO_BLACKLIST)) {
+            fs.writeFileSync(ARQUIVO_BLACKLIST, JSON.stringify([], null, 2), 'utf-8');
+            return [];
+        }
+        const raw = JSON.parse(fs.readFileSync(ARQUIVO_BLACKLIST, 'utf-8'));
+        if (Array.isArray(raw)) {
+            return raw.map(item => {
+                if (typeof item === 'object' && item !== null) {
+                    const numLimpo = extrairNumeroLimpo(item.numero);
+                    return {
+                        numero: numLimpo,
+                        numeroFormatado: formatarExibicao(numLimpo),
+                        motivo: item.motivo || 'Banimento Permanente',
+                        dataBanimento: item.dataBanimento || new Date().toISOString(),
+                        totalGrupos: item.totalGrupos || null
+                    };
+                } else {
+                    const numLimpo = extrairNumeroLimpo(item);
+                    return {
+                        numero: numLimpo,
+                        numeroFormatado: formatarExibicao(numLimpo),
+                        motivo: 'Banimento Permanente',
+                        dataBanimento: new Date().toISOString(),
+                        totalGrupos: null
+                    };
+                }
+            }).filter(x => Boolean(x.numero));
+        }
+    } catch (e) {
+        console.error('[!] Erro ao carregar blacklist_aegis.json:', e.message);
+    }
+    return [];
+}
+
+let cacheBlacklist = carregarBlacklist();
+
+function salvarBlacklist(lista) {
+    const unicos = [];
+    const vistos = new Set();
+    for (const item of lista) {
+        const num = extrairNumeroLimpo(item.numero);
+        if (!num || vistos.has(num)) continue;
+        vistos.add(num);
+        unicos.push({
+            numero: num,
+            numeroFormatado: formatarExibicao(num),
+            motivo: item.motivo || 'Banimento Permanente',
+            dataBanimento: item.dataBanimento || new Date().toISOString(),
+            totalGrupos: item.totalGrupos || null
+        });
+    }
+    fs.writeFileSync(ARQUIVO_BLACKLIST, JSON.stringify(unicos, null, 2), 'utf-8');
+    cacheBlacklist = unicos;
+    return unicos;
+}
+
+function estaNaBlacklist(numOuJid) {
+    if (!numOuJid) return false;
+    const numLimpo = extrairNumeroLimpo(numOuJid);
+    const idNorm = normalizarID(numLimpo);
+
+    for (const b of cacheBlacklist) {
+        const bNum = b.numero;
+        if (!bNum) continue;
+        if (bNum === numLimpo || (idNorm && normalizarID(bNum) === idNorm)) return true;
+        if (numLimpo.length >= 10 && bNum.length >= 10 && (bNum.includes(numLimpo) || numLimpo.includes(bNum))) return true;
+    }
+    return false;
+}
+
+// =====================================================================
+// 🚀 GERENCIADOR DE CONEXÃO DOS ADMS (CONTAS DO WHATSAPP)
 // =====================================================================
 const snipersAtivos = [];
 const mapaAdminGrupos = new Map(); // idGrupo -> Set(indicesDosSnipers)
 let sentinelaRealtimeAtivo = false;
 const feedEventos = [];
+
+// Estado em RAM das contas de ADMs (para QR Code & Pairing Code via site)
+const estadoAdms = new Map();
 
 function adicionarEventoFeed(tipo, texto) {
     feedEventos.unshift({
@@ -148,20 +293,77 @@ function recarregarWhitelist() {
     return cacheWhitelist.length;
 }
 
-function obterEstadoAegis() {
-    return {
-        snipers: [1, 2, 3, 4].map(idx => {
-            const s = snipersAtivos.find(x => x.indice === idx);
-            return {
-                indice: idx,
-                conectado: !!(s && s.conectado && s.sock?.ws?.isOpen),
-                numero: s?.sock?.user?.id ? extrairNumeroLimpo(s.sock.user.id) : null
+function obterStatusAdms() {
+    configAtual = carregarConfig();
+    const total = configAtual.quantidadeAdms || 4;
+    const lista = [];
+
+    for (let i = 1; i <= total; i++) {
+        let estado = estadoAdms.get(i);
+        const sAtivo = snipersAtivos.find(x => x.indice === i && x.conectado && x.sock?.ws?.isOpen);
+
+        if (sAtivo) {
+            const num = extrairNumeroLimpo(sAtivo.sock?.user?.id);
+            if (!estado) {
+                estado = {
+                    indice: i,
+                    conectado: true,
+                    status: 'conectado',
+                    numero: num,
+                    qrCodeDataUrl: null,
+                    pairingCode: null,
+                    erroMsg: null,
+                    atualizadoEm: Date.now()
+                };
+                estadoAdms.set(i, estado);
+            } else {
+                estado.conectado = true;
+                estado.status = 'conectado';
+                estado.numero = num;
+            }
+        } else if (!estado) {
+            const pastaAuth = path.join(__dirname, `auth_sniper_${i}`);
+            const temCreds = fs.existsSync(path.join(pastaAuth, 'creds.json'));
+            estado = {
+                indice: i,
+                conectado: false,
+                status: temCreds ? 'pronto_para_conectar' : 'desconectado',
+                numero: null,
+                qrCodeDataUrl: null,
+                pairingCode: null,
+                erroMsg: null,
+                atualizadoEm: Date.now()
             };
-        }),
+            estadoAdms.set(i, estado);
+        }
+
+        lista.push({
+            indice: i,
+            conectado: estado.conectado,
+            status: estado.status,
+            numero: estado.numero,
+            numeroFormatado: formatarExibicao(estado.numero),
+            qrCodeDataUrl: estado.qrCodeDataUrl,
+            pairingCode: estado.pairingCode,
+            erroMsg: estado.erroMsg,
+            atualizadoEm: estado.atualizadoEm
+        });
+    }
+
+    return lista;
+}
+
+function obterEstadoAegis() {
+    configAtual = carregarConfig();
+    return {
+        snipers: obterStatusAdms(),
+        adms: obterStatusAdms(),
+        config: configAtual,
         totalGruposBlack: gruposBlackOficiais.size,
         totalGruposBaseForte: gruposBaseForteOficiais.size,
         totalAdminsMapeados: adminsGlobais.size,
         totalWhitelist: cacheWhitelist.length,
+        totalBlacklist: cacheBlacklist.length,
         filaKicksTamanho: filaKicksRealtime.length,
         sentinelaAtivo: sentinelaRealtimeAtivo,
         feedEventos: feedEventos.slice(0, 50)
@@ -180,6 +382,12 @@ const adminsGlobais = new Set();
 const travasRedundancia = new Set();
 const mapaLidParaTelefone = new Map(); // lid -> telefone real
 
+function obterNomeGrupo(idGrupo) {
+    if (gruposBlackOficiais.has(idGrupo)) return gruposBlackOficiais.get(idGrupo).subject;
+    if (gruposBaseForteOficiais.has(idGrupo)) return gruposBaseForteOficiais.get(idGrupo).subject;
+    return idGrupo;
+}
+
 function obterSnipersDisponiveis(idGrupo) {
     const indices = mapaAdminGrupos.get(idGrupo);
     if (indices && indices.size > 0) {
@@ -190,17 +398,31 @@ function obterSnipersDisponiveis(idGrupo) {
         );
         if (adminsConectados.length > 0) return adminsConectados;
     }
-    // Fallback: qualquer sniper conectado e pronto com socket aberto
+    // Fallback: qualquer ADM conectado e pronto com socket aberto
     return snipersAtivos.filter(s => s.conectado && s.sock?.ws?.isOpen);
 }
 
+// Conexão autônoma de ADM via pasta existente
 async function conectarSniper(indice) {
+    indice = Number(indice);
     const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
     if (!fs.existsSync(pastaAuth)) return null;
 
     try {
         const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
-        if (!state.creds.registered) return null;
+        if (!state.creds.registered) {
+            estadoAdms.set(indice, {
+                indice,
+                conectado: false,
+                status: 'desconectado',
+                numero: null,
+                qrCodeDataUrl: null,
+                pairingCode: null,
+                erroMsg: null,
+                atualizadoEm: Date.now()
+            });
+            return null;
+        }
 
         const { version } = await fetchLatestBaileysVersion();
         const sock = makeWASocket({
@@ -219,8 +441,9 @@ async function conectarSniper(indice) {
 
             sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
                 if (connection === 'open') {
-                    console.log(`[✅ SNIPER 0${indice}] Conectado e armamento pronto.`);
-                    adicionarEventoFeed('SNIPER', `✅ Sniper 0${indice} armado e operacional.`);
+                    const num = extrairNumeroLimpo(sock.user?.id);
+                    console.log(`[✅ ADM 0${indice}] Conectado e de olho nos grupos (+${num})`);
+                    adicionarEventoFeed('ADM', `✅ Administrador 0${indice} operacional (+${formatarExibicao(num)})`);
 
                     let sniperObj = snipersAtivos.find(x => x.indice === indice);
                     if (!sniperObj) {
@@ -230,6 +453,17 @@ async function conectarSniper(indice) {
                         sniperObj.sock = sock;
                         sniperObj.conectado = true;
                     }
+
+                    estadoAdms.set(indice, {
+                        indice,
+                        conectado: true,
+                        status: 'conectado',
+                        numero: num,
+                        qrCodeDataUrl: null,
+                        pairingCode: null,
+                        erroMsg: null,
+                        atualizadoEm: Date.now()
+                    });
 
                     if (sentinelaRealtimeAtivo) {
                         vincularListenersRealtime(sniperObj);
@@ -245,35 +479,327 @@ async function conectarSniper(indice) {
                     if (sniperObj) sniperObj.conectado = false;
 
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    if (statusCode === DisconnectReason.loggedOut) {
-                        console.log(`[❌ SNIPER 0${indice}] Deslogado.`);
-                        if (!resolvido) {
-                            resolvido = true;
-                            resolve(null);
-                        }
+                    const ehLogout = statusCode === DisconnectReason.loggedOut;
+
+                    if (ehLogout) {
+                        console.log(`[❌ ADM 0${indice}] Deslogado pelo WhatsApp.`);
+                        estadoAdms.set(indice, {
+                            indice,
+                            conectado: false,
+                            status: 'desconectado',
+                            numero: null,
+                            qrCodeDataUrl: null,
+                            pairingCode: null,
+                            erroMsg: null,
+                            atualizadoEm: Date.now()
+                        });
+                        try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
+                        if (!resolvido) { resolvido = true; resolve(null); }
                     } else {
-                        console.log(`[⚠️ SNIPER 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'}). Reconectando em 3s...`);
-                        setTimeout(() => reconectarSniper(indice), 3000);
+                        console.log(`[⚠️ ADM 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'}). Reconectando em 3s...`);
+                        setTimeout(() => conectarSniper(indice), 3000);
                     }
                 }
             });
         });
     } catch (e) {
-        console.error(`[!] Falha no Sniper 0${indice}:`, e.message);
+        console.error(`[!] Falha ao conectar ADM 0${indice}:`, e.message);
         return null;
     }
 }
 
-async function reconectarSniper(indice) {
-    await conectarSniper(indice);
+// Conexão manual via site: QR Code OU Pairing Code
+async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
+    indice = Number(indice);
+    if (!indice || indice < 1) throw new Error('Índice de administrador inválido.');
+
+    const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
+    if (!fs.existsSync(pastaAuth)) {
+        fs.mkdirSync(pastaAuth, { recursive: true });
+    }
+
+    // Fecha socket existente no mesmo slot se houver
+    const sExistente = snipersAtivos.find(x => x.indice === indice);
+    if (sExistente && sExistente.sock) {
+        try {
+            sExistente.sock.ev.removeAllListeners();
+            if (sExistente.sock.ws) sExistente.sock.ws.close();
+        } catch (e) { }
+    }
+
+    let estado = estadoAdms.get(indice) || {
+        indice,
+        conectado: false,
+        status: 'iniciando',
+        numero: null,
+        qrCodeDataUrl: null,
+        pairingCode: null,
+        erroMsg: null,
+        atualizadoEm: Date.now()
+    };
+
+    estado.status = tipoConexao === 'codigo' ? 'solicitando_codigo' : 'gerando_qr';
+    estado.qrCodeDataUrl = null;
+    estado.pairingCode = null;
+    estado.erroMsg = null;
+    estado.atualizadoEm = Date.now();
+    estadoAdms.set(indice, estado);
+
+    const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
+    const { version } = await fetchLatestBaileysVersion();
+
+    const sock = makeWASocket({
+        version,
+        auth: state,
+        printQRInTerminal: false,
+        logger: pino({ level: 'silent' }),
+        browser: Browsers.ubuntu('Chrome'),
+        syncFullHistory: false
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    let pairingSolicitado = false;
+
+    if (state.creds.registered) {
+        estado.status = 'conectando';
+    }
+
+    sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+        // 1. QR CODE
+        if (qr && tipoConexao === 'qr' && !sock.authState.creds.registered) {
+            try {
+                const dataUrl = await qrcode.toDataURL(qr, { scale: 7, margin: 2 });
+                estado.qrCodeDataUrl = dataUrl;
+                estado.status = 'qr_pronto';
+                estado.atualizadoEm = Date.now();
+                console.log(`[📷 ADM 0${indice}] QR Code gerado para leitura no Painel Web.`);
+                adicionarEventoFeed('ADM', `📷 ADM 0${indice}: QR Code gerado. Aponte o WhatsApp para conectar.`);
+            } catch (err) {
+                estado.erroMsg = 'Falha ao gerar imagem do QR Code: ' + err.message;
+                estado.status = 'erro';
+            }
+        }
+
+        // 2. PAIRING CODE
+        if (tipoConexao === 'codigo' && !sock.authState.creds.registered && !pairingSolicitado) {
+            pairingSolicitado = true;
+            setTimeout(async () => {
+                try {
+                    const numLimpo = extrairNumeroLimpo(numeroTelefone);
+                    if (!numLimpo) throw new Error('Número de telefone não informado.');
+                    console.log(`[🔢 ADM 0${indice}] Solicitando código de pareamento para ${numLimpo}...`);
+                    const rawCode = await sock.requestPairingCode(numLimpo);
+                    const formatado = rawCode ? (rawCode.length === 8 ? `${rawCode.substring(0, 4)}-${rawCode.substring(4)}` : rawCode) : 'ERRO';
+                    estado.pairingCode = formatado;
+                    estado.status = 'codigo_pronto';
+                    estado.atualizadoEm = Date.now();
+                    console.log(`[🔑 ADM 0${indice}] Código de Pareamento: ${formatado}`);
+                    adicionarEventoFeed('ADM', `🔑 ADM 0${indice}: Código gerado (${formatado}) para o número ${formatarExibicao(numLimpo)}`);
+                } catch (err) {
+                    console.error(`[!] Falha no Pairing Code ADM 0${indice}:`, err.message);
+                    estado.erroMsg = 'Falha ao solicitar código: ' + (err.message || err);
+                    estado.status = 'erro';
+                    estado.atualizadoEm = Date.now();
+                }
+            }, 2000);
+        }
+
+        // 3. CONECTADO
+        if (connection === 'open') {
+            const meuNum = extrairNumeroLimpo(sock.user?.id);
+            console.log(`[✅ ADM 0${indice}] Conectado com sucesso! (+${meuNum})`);
+            adicionarEventoFeed('ADM', `✅ Administrador 0${indice} conectado com sucesso (+${formatarExibicao(meuNum)})`);
+
+            estado.conectado = true;
+            estado.status = 'conectado';
+            estado.numero = meuNum;
+            estado.qrCodeDataUrl = null;
+            estado.pairingCode = null;
+            estado.erroMsg = null;
+            estado.atualizadoEm = Date.now();
+
+            let sniperObj = snipersAtivos.find(x => x.indice === indice);
+            if (!sniperObj) {
+                sniperObj = { indice, sock, conectado: true };
+                snipersAtivos.push(sniperObj);
+            } else {
+                sniperObj.sock = sock;
+                sniperObj.conectado = true;
+            }
+
+            if (sentinelaRealtimeAtivo) {
+                vincularListenersRealtime(sniperObj);
+            }
+        }
+
+        // 4. FECHADO
+        if (connection === 'close') {
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const ehLogout = statusCode === DisconnectReason.loggedOut;
+
+            let sniperObj = snipersAtivos.find(x => x.indice === indice);
+            if (sniperObj) sniperObj.conectado = false;
+
+            if (ehLogout) {
+                console.log(`[❌ ADM 0${indice}] Deslogado.`);
+                estado.conectado = false;
+                estado.status = 'desconectado';
+                estado.numero = null;
+                estado.qrCodeDataUrl = null;
+                estado.pairingCode = null;
+                estado.atualizadoEm = Date.now();
+                try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
+            } else {
+                if (state.creds.registered && estado.status === 'conectado') {
+                    setTimeout(() => conectarSniper(indice), 3000);
+                }
+            }
+        }
+    });
+
+    return estado;
+}
+
+// Desconectar e limpar credenciais de um ADM
+async function desconectarAdm(indice) {
+    indice = Number(indice);
+    const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
+
+    const idx = snipersAtivos.findIndex(x => x.indice === indice);
+    if (idx !== -1) {
+        const s = snipersAtivos[idx];
+        try {
+            s.sock.ev.removeAllListeners();
+            if (s.sock.logout) await s.sock.logout();
+            else if (s.sock.ws) s.sock.ws.close();
+        } catch (e) { }
+        snipersAtivos.splice(idx, 1);
+    }
+
+    if (fs.existsSync(pastaAuth)) {
+        try {
+            fs.rmSync(pastaAuth, { recursive: true, force: true });
+        } catch (e) {
+            console.error(`[!] Erro ao limpar auth_sniper_${indice}:`, e.message);
+        }
+    }
+
+    const estado = {
+        indice,
+        conectado: false,
+        status: 'desconectado',
+        numero: null,
+        qrCodeDataUrl: null,
+        pairingCode: null,
+        erroMsg: null,
+        atualizadoEm: Date.now()
+    };
+    estadoAdms.set(indice, estado);
+
+    adicionarEventoFeed('ADM', `🔌 Administrador 0${indice} desconectado e credenciais removidas.`);
+    return { sucesso: true, mensagem: `Administrador 0${indice} desconectado com sucesso.` };
+}
+
+// =====================================================================
+// 💀 BANIMENTO PERMANENTE MANUAL & DESBANIR
+// =====================================================================
+async function banirPermanente(numeroAlvo, motivo = 'Banimento Permanente Manual', totalGrupos = 0) {
+    const numLimpo = extrairNumeroLimpo(numeroAlvo);
+    if (!numLimpo) throw new Error('Número de telefone inválido.');
+
+    if (estaNaWhitelist(numLimpo)) {
+        throw new Error(`O número ${formatarExibicao(numLimpo)} está na Whitelist da Equipe e não pode ser banido.`);
+    }
+
+    const idNorm = normalizarID(numLimpo);
+
+    let lista = carregarBlacklist();
+    const jaExiste = lista.find(x => x.numero === numLimpo || (idNorm && normalizarID(x.numero) === idNorm));
+    if (!jaExiste) {
+        lista.unshift({
+            numero: numLimpo,
+            numeroFormatado: formatarExibicao(numLimpo),
+            motivo: motivo,
+            dataBanimento: new Date().toISOString(),
+            totalGrupos: totalGrupos || null
+        });
+        salvarBlacklist(lista);
+    }
+
+    adicionarEventoFeed('BAN_PERMANENTE', `⛔ [BAN PERMANENTE] ${formatarExibicao(numLimpo)} banido! Motivo: ${motivo}`);
+
+    // Expulsa de TODOS os grupos catalogados
+    const todosGrupos = [
+        ...Array.from(gruposBlackOficiais.values()),
+        ...Array.from(gruposBaseForteOficiais.values())
+    ];
+
+    const jidsParaTentar = [
+        `${numLimpo}@s.whatsapp.net`,
+        `${numLimpo}@lid`
+    ];
+
+    let gruposAfetados = 0;
+    for (const g of todosGrupos) {
+        const estaPresente = (g.participants || []).some(p => {
+            const pNum = extrairNumeroParticipante(p);
+            return pNum && (pNum === numLimpo || (idNorm && normalizarID(pNum) === idNorm));
+        });
+
+        if (estaPresente) {
+            gruposAfetados++;
+            enfileirarKickRealtime({
+                idGrupo: g.id,
+                nomeGrupo: g.subject || g.id,
+                tagCampanha: identificarCampanha(g.subject) || 'GRUPO',
+                numReal: numLimpo,
+                idNorm: idNorm,
+                jidsParaTentar,
+                mapaPresencaAlvo: presencaBlack,
+                ehBanPermanente: true
+            });
+        }
+    }
+
+    return {
+        sucesso: true,
+        numero: numLimpo,
+        numeroFormatado: formatarExibicao(numLimpo),
+        gruposAfetados,
+        mensagem: `Número ${formatarExibicao(numLimpo)} banido permanentemente e expulsão de ${gruposAfetados} grupos enfileirada!`
+    };
+}
+
+function desbanir(numeroAlvo) {
+    const numLimpo = extrairNumeroLimpo(numeroAlvo);
+    const idNorm = normalizarID(numLimpo);
+
+    let lista = carregarBlacklist();
+    const antes = lista.length;
+    lista = lista.filter(x => x.numero !== numLimpo && (!idNorm || normalizarID(x.numero) !== idNorm));
+
+    if (lista.length === antes) {
+        return { sucesso: false, erro: 'Número não encontrado na Blacklist.' };
+    }
+
+    salvarBlacklist(lista);
+    adicionarEventoFeed('SISTEMA', `🔓 ${formatarExibicao(numLimpo)} foi removido da Blacklist.`);
+    return { sucesso: true, mensagem: `Número ${formatarExibicao(numLimpo)} desbanido com sucesso.` };
 }
 
 // =====================================================================
 // 🎯 FASE 1: VARREDURA E LIMPEZA INICIAL (BLACK + BASE FORTE)
 // =====================================================================
 async function executarLimpezaInicial() {
+    configAtual = carregarConfig();
+    const limiteMax = configAtual.limiteGruposPorCampanha;
+    const limiteBan = configAtual.limiteBanPermanente;
+
     console.log('\n=================================================================');
     console.log('🛡️  FASE 1: MAPEANDO GRUPOS (BLACK VITALÍCIA & BASE FORTE)...');
+    console.log(`📌  Regra Saturação: Máx. ${limiteMax} grupos por pessoa`);
+    console.log(`⛔  Regra Ban Permanente: Acima de ${limiteBan} links = Ban total + Remoção de TODOS os grupos`);
     console.log('=================================================================');
 
     adminsGlobais.clear();
@@ -283,7 +809,6 @@ async function executarLimpezaInicial() {
     presencaBlack.clear();
     presencaBaseForte.clear();
 
-    // 1. Mapear grupos e autoridades em todos os Snipers
     for (const sniper of snipersAtivos) {
         try {
             const all = await sniper.sock.groupFetchAllParticipating();
@@ -292,7 +817,6 @@ async function executarLimpezaInicial() {
                 const campanha = identificarCampanha(g.subject);
                 if (!campanha) continue;
 
-                // Catalogar admins e mapear LIDs
                 for (const p of (g.participants || [])) {
                     if (p.lid && p.jid) mapaLidParaTelefone.set(extrairNumeroLimpo(p.lid), extrairNumeroLimpo(p.jid));
                     if (p.lid && p.id && p.id.includes('@s.whatsapp.net')) mapaLidParaTelefone.set(extrairNumeroLimpo(p.lid), extrairNumeroLimpo(p.id));
@@ -307,7 +831,6 @@ async function executarLimpezaInicial() {
                     }
                 }
 
-                // Identificar autoridade do Sniper
                 const meuNum = extrairNumeroLimpo(sniper.sock.user?.id);
                 const eu = g.participants?.find(p => {
                     const pNum = extrairNumeroParticipante(p);
@@ -319,7 +842,6 @@ async function executarLimpezaInicial() {
                     mapaAdminGrupos.get(id).add(sniper.indice);
                 }
 
-                // Salva grupo na campanha correspondente
                 if (campanha === 'BLACK_VITALICIA') {
                     if (!gruposBlackOficiais.has(id) || gruposBlackOficiais.get(id).participants.length < g.participants.length) {
                         gruposBlackOficiais.set(id, g);
@@ -331,7 +853,7 @@ async function executarLimpezaInicial() {
                 }
             }
         } catch (e) {
-            console.error(`[!] Erro na varredura do Sniper 0${sniper.indice}:`, e.message);
+            console.error(`[!] Erro na varredura do ADM 0${sniper.indice}:`, e.message);
         }
     }
 
@@ -342,8 +864,8 @@ async function executarLimpezaInicial() {
     console.log(`✅ Desafio Base Forte: ${baseForteFiltrados.length} grupos oficiais.`);
     console.log(`👑 Total de Administradores protegidos: ${adminsGlobais.size}`);
     console.log(`📋 Total na Whitelist de Imunidade: ${cacheWhitelist.length}`);
+    console.log(`⛔ Total na Blacklist Permanente: ${cacheBlacklist.length}`);
 
-    // Helper para auditar e limpar uma campanha específica
     async function auditarELimparCampanha(nomeCampanha, listaGrupos, mapaPresencaRAM) {
         console.log(`\n-------------------------------------------------------------`);
         console.log(`🔍 AUDITANDO: ${nomeCampanha} (${listaGrupos.length} grupos)`);
@@ -376,6 +898,7 @@ async function executarLimpezaInicial() {
                         jidOriginal: jidOriginal,
                         ehAdmin: false,
                         ehWhitelist: false,
+                        ehBlacklist: false,
                         grupos: []
                     });
                 }
@@ -387,6 +910,9 @@ async function executarLimpezaInicial() {
                 if (estaNaWhitelist(num, snipersAtivos) || estaNaWhitelist(idN, snipersAtivos)) {
                     reg.ehWhitelist = true;
                 }
+                if (estaNaBlacklist(num) || estaNaBlacklist(idN)) {
+                    reg.ehBlacklist = true;
+                }
 
                 reg.grupos.push(info);
             }
@@ -394,16 +920,41 @@ async function executarLimpezaInicial() {
 
         const filaRemocoes = [];
         for (const [idN, dados] of mapaAlvos.entries()) {
-            if (dados.grupos.length >= 5) {
-                if (dados.ehAdmin) {
-                    console.log(`👑 [IMUNE - ADMIN] ${dados.numero} está em ${dados.grupos.length} grupos, mas foi preservado por ser Administrador.`);
-                    continue;
-                }
-                if (dados.ehWhitelist) {
-                    console.log(`🛡️ [IMUNE - WHITELIST] ${dados.numero} está em ${dados.grupos.length} grupos, mas foi preservado por estar na Whitelist.`);
-                    continue;
+            if (dados.ehAdmin || dados.ehWhitelist) continue;
+
+            const excedeuLimiteBan = dados.grupos.length > limiteBan;
+            if (excedeuLimiteBan || dados.ehBlacklist) {
+                const motivoBan = dados.ehBlacklist
+                    ? 'Presente na Blacklist Permanente'
+                    : `Detectado em ${dados.grupos.length} links (Limite permitido: ${limiteBan})`;
+
+                console.log(`⛔ [BAN PERMANENTE] Lead ${dados.numero} (${dados.grupos.length} grupos). Motivo: ${motivoBan}. Será removido de TODOS os grupos!`);
+                adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${dados.numero} banido permanentemente (${dados.grupos.length} grps). Expulsando de TODOS os grupos sem exceção!`);
+
+                if (!estaNaBlacklist(dados.numero)) {
+                    cacheBlacklist.unshift({
+                        numero: dados.numero,
+                        numeroFormatado: formatarExibicao(dados.numero),
+                        motivo: motivoBan,
+                        dataBanimento: new Date().toISOString(),
+                        totalGrupos: dados.grupos.length
+                    });
+                    salvarBlacklist(cacheBlacklist);
                 }
 
+                filaRemocoes.push({
+                    numero: dados.numero,
+                    idNorm: idN,
+                    jidOriginal: dados.jidOriginal,
+                    totalGrupos: dados.grupos.length,
+                    manter: null,
+                    remover: dados.grupos,
+                    ehBanPermanente: true
+                });
+                continue;
+            }
+
+            if (dados.grupos.length > limiteMax) {
                 dados.grupos.sort((a, b) => {
                     if (a.creation && b.creation && a.creation !== b.creation) return a.creation - b.creation;
                     return a.subject.localeCompare(b.subject, undefined, { numeric: true });
@@ -418,16 +969,17 @@ async function executarLimpezaInicial() {
                     jidOriginal: dados.jidOriginal,
                     totalGrupos: dados.grupos.length,
                     manter,
-                    remover
+                    remover,
+                    ehBanPermanente: false
                 });
             }
         }
 
         const totalKicks = filaRemocoes.reduce((acc, a) => acc + a.remover.length, 0);
-        console.log(`📊 [${nomeCampanha}] Leads em 5+ grupos: ${filaRemocoes.length} | Kicks necessários: ${totalKicks}`);
+        console.log(`📊 [${nomeCampanha}] Leads para agir: ${filaRemocoes.length} | Kicks necessários: ${totalKicks}`);
 
         if (filaRemocoes.length === 0) {
-            console.log(`✨ [${nomeCampanha}] Nenhuma duplicata encontrada. Grupo 100% higienizado!`);
+            console.log(`✨ [${nomeCampanha}] Nenhuma violação encontrada. Grupos 100% higienizados!`);
             return;
         }
 
@@ -437,13 +989,14 @@ async function executarLimpezaInicial() {
 
         for (let i = 0; i < filaRemocoes.length; i++) {
             const item = filaRemocoes[i];
-            console.log(`[${i + 1}/${filaRemocoes.length}] ${item.numero} (${item.totalGrupos} grps) -> Mantido: "${item.manter.subject}"`);
+            const destinoTxt = item.ehBanPermanente ? 'NENHUM (BAN PERMANENTE TOTAL)' : `Mantido: "${item.manter?.subject}"`;
+            console.log(`[${i + 1}/${filaRemocoes.length}] ${item.numero} (${item.totalGrupos} grps) -> ${destinoTxt}`);
 
             for (const grp of item.remover) {
                 rotador++;
                 const snipersDisponiveis = obterSnipersDisponiveis(grp.id);
                 if (snipersDisponiveis.length === 0) {
-                    console.log(`   ⚠️ [FALHA] Nenhum sniper conectado disponível para remover de "${grp.subject}".`);
+                    console.log(`   ⚠️ [FALHA] Nenhum ADM conectado disponível para remover de "${grp.subject}".`);
                     continue;
                 }
                 const operador = snipersDisponiveis[rotador % snipersDisponiveis.length];
@@ -466,7 +1019,7 @@ async function executarLimpezaInicial() {
                     try {
                         await operador.sock.groupParticipantsUpdate(grp.id, [jidAlvo], 'remove');
                         sucessos++;
-                        console.log(`   🔴 [KICK] Removido de "${grp.subject}" (Sniper 0${operador.indice})`);
+                        console.log(`   🔴 [KICK] Removido de "${grp.subject}" (ADM 0${operador.indice})`);
                         mapaPresencaRAM.get(item.idNorm)?.delete(grp.id);
                         kickOk = true;
                         break;
@@ -479,7 +1032,6 @@ async function executarLimpezaInicial() {
                     console.log(`   ⚠️ [FALHA] Falha ao remover de "${grp.subject}": ${erroMsg}`);
                 }
 
-                // Delay seguro anti-ban de 1.5s a 2.3s
                 const delay = Math.floor(Math.random() * 800) + 1500;
                 await sleep(delay);
             }
@@ -487,15 +1039,12 @@ async function executarLimpezaInicial() {
         console.log(`🏁 [${nomeCampanha}] Limpeza concluída: ${sucessos}/${totalKicks} kicks executados.`);
     }
 
-    // 1. Limpa a Black Vitalícia primeiro (como solicitado)
     await auditarELimparCampanha('BLACK VITALÍCIA (FASE 1)', blackFiltrados, presencaBlack);
-
-    // 2. Limpa o Desafio Base Forte em seguida
     await auditarELimparCampanha('DESAFIO BASE FORTE (FASE 2)', baseForteFiltrados, presencaBaseForte);
 }
 
 // =====================================================================
-// 🛑 FILA SERIALIZADA DE KICKS REALTIME (ANTI-RATE-LIMIT & SUPORTE A LID)
+// 🛑 FILA SERIALIZADA DE KICKS REALTIME (ANTI-RATE-LIMIT & ANTI-BAN)
 // =====================================================================
 const filaKicksRealtime = [];
 let processandoFilaRealtime = false;
@@ -511,18 +1060,18 @@ async function processarFilaKicksRealtime() {
     processandoFilaRealtime = true;
 
     while (filaKicksRealtime.length > 0) {
-        const item = filaKicksRealtime[0]; // Mantém na fila até confirmação ou exaustão de retentativas
+        const item = filaKicksRealtime[0];
         item.tentativas = (item.tentativas || 0) + 1;
 
         const snipersDisponiveis = obterSnipersDisponiveis(item.idGrupo);
 
         if (snipersDisponiveis.length === 0) {
             if (item.tentativas <= 5) {
-                console.log(`[⏳ CATRACA] Snipers reconectando. Aguardando 2.5s para expulsar ${item.numReal} de "${item.nomeGrupo}" (Tentativa ${item.tentativas}/5)...`);
+                console.log(`[⏳ CATRACA] ADMs reconectando. Aguardando 2.5s para expulsar ${item.numReal} de "${item.nomeGrupo}" (Tentativa ${item.tentativas}/5)...`);
                 await sleep(2500);
-                continue; // Tenta o mesmo item novamente
+                continue;
             } else {
-                console.log(`[!] Erro definitivo: Nenhum Sniper conectado com permissão em "${item.nomeGrupo}" após 5 tentativas.`);
+                console.log(`[!] Erro definitivo: Nenhum ADM conectado com permissão em "${item.nomeGrupo}" após 5 tentativas.`);
                 filaKicksRealtime.shift();
                 continue;
             }
@@ -535,15 +1084,17 @@ async function processarFilaKicksRealtime() {
             rotadorRealtime++;
             const operador = snipersDisponiveis[rotadorRealtime % snipersDisponiveis.length];
 
-            // Pula operador se socket oscilou
             if (!operador.conectado || !operador.sock?.ws?.isOpen) continue;
 
             for (const jidAlvo of item.jidsParaTentar) {
                 try {
                     await operador.sock.groupParticipantsUpdate(item.idGrupo, [jidAlvo], 'remove');
-                    item.mapaPresencaAlvo.get(item.idNorm)?.delete(item.idGrupo);
-                    console.log(`⛔ [BARRADO PELA CATRACA] ${item.numReal} expulso de "${item.nomeGrupo}" (${item.tagCampanha}) pelo Sniper 0${operador.indice}.`);
-                    adicionarEventoFeed('EXPULSAO', `⛔ ${item.numReal} expulso de "${item.nomeGrupo}" (${item.tagCampanha}) pelo Sniper 0${operador.indice}`);
+                    if (item.mapaPresencaAlvo) {
+                        item.mapaPresencaAlvo.get(item.idNorm)?.delete(item.idGrupo);
+                    }
+                    const tagAcao = item.ehBanPermanente ? '⛔ [BAN PERMANENTE TOTAL]' : '⛔ [BARRADO PELA CATRACA]';
+                    console.log(`${tagAcao} ${item.numReal} expulso de "${item.nomeGrupo}" (${item.tagCampanha}) pelo ADM 0${operador.indice}.`);
+                    adicionarEventoFeed('EXPULSAO', `${tagAcao} ${formatarExibicao(item.numReal)} expulso de "${item.nomeGrupo}" (${item.tagCampanha})`);
                     removido = true;
                     break;
                 } catch (err) {
@@ -554,7 +1105,7 @@ async function processarFilaKicksRealtime() {
         }
 
         if (removido) {
-            filaKicksRealtime.shift(); // Concluído com sucesso
+            filaKicksRealtime.shift();
         } else {
             const erroStr = String(ultimoErro).toLowerCase();
             const ehErroConexao = erroStr.includes('connection closed') ||
@@ -563,16 +1114,15 @@ async function processarFilaKicksRealtime() {
                                   erroStr.includes('closed');
 
             if (ehErroConexao && item.tentativas <= 5) {
-                console.log(`[⏳ CATRACA] Conexão oscilou ao expulsar de "${item.nomeGrupo}". Aguardando 2s para tentar novamente (${item.tentativas}/5)...`);
+                console.log(`[⏳ CATRACA] Conexão oscilou ao expulsar de "${item.nomeGrupo}". Aguardando 2s (${item.tentativas}/5)...`);
                 await sleep(2000);
-                continue; // Repete o mesmo item após aguardar reconexão
+                continue;
             } else {
                 console.log(`[!] Erro ao expulsar ${item.numReal} de "${item.nomeGrupo}": ${ultimoErro}`);
-                filaKicksRealtime.shift(); // Desiste após esgotar tentativas ou erro permanente
+                filaKicksRealtime.shift();
             }
         }
 
-        // Delay tático anti-ban e anti-rate-limit entre kicks
         await sleep(1500 + Math.floor(Math.random() * 800));
     }
 
@@ -597,7 +1147,6 @@ function vincularListenersRealtime(sniper) {
             campanha = 'BASE_FORTE';
             nomeGrupo = gruposBaseForteOficiais.get(idGrupo).subject;
         } else {
-            // Tenta detectar pelo nome em grupos recém-criados
             try {
                 const meta = await sniper.sock.groupMetadata(idGrupo);
                 nomeGrupo = meta?.subject || idGrupo;
@@ -607,7 +1156,7 @@ function vincularListenersRealtime(sniper) {
             } catch (e) { }
         }
 
-        if (!campanha) return; // Ignora outros grupos que não sejam Black ou Base Forte
+        if (!campanha) return;
 
         const mapaPresencaAlvo = campanha === 'BLACK_VITALICIA' ? presencaBlack : presencaBaseForte;
         const tagCampanha = campanha === 'BLACK_VITALICIA' ? 'BLACK VITALÍCIA' : 'BASE FORTE';
@@ -623,54 +1172,27 @@ function vincularListenersRealtime(sniper) {
             const idNorm = normalizarID(numReal);
             if (!numReal || !idNorm) continue;
 
-            // Anti-duplicação se múltiplos snipers ouvirem o mesmo evento
             const hashEntrada = `${idGrupo}-${idNorm}`;
             if (travasRedundancia.has(hashEntrada)) continue;
             travasRedundancia.add(hashEntrada);
             setTimeout(() => travasRedundancia.delete(hashEntrada), 30000);
 
-            // 1. Whitelist Imunidade
-            if (estaNaWhitelist(numReal, snipersAtivos) || estaNaWhitelist(idNorm, snipersAtivos)) {
-                console.log(`🛡️ [CATRACA - WHITELIST] ${numReal} entrou em "${nomeGrupo}" (Imune por estar na Whitelist).`);
-                adicionarEventoFeed('WHITELIST', `🛡️ ${numReal} liberado em "${nomeGrupo}" (Imune por Whitelist)`);
-                continue;
+            const jidsParaTentar = [];
+            if (idNovatoBruto && idNovatoBruto.includes('@')) jidsParaTentar.push(idNovatoBruto);
+            if (numReal) {
+                if (idNovatoBruto.includes('@lid')) {
+                    if (!jidsParaTentar.includes(`${numReal}@lid`)) jidsParaTentar.push(`${numReal}@lid`);
+                    if (!jidsParaTentar.includes(`${numReal}@s.whatsapp.net`)) jidsParaTentar.push(`${numReal}@s.whatsapp.net`);
+                } else {
+                    if (!jidsParaTentar.includes(`${numReal}@s.whatsapp.net`)) jidsParaTentar.push(`${numReal}@s.whatsapp.net`);
+                    if (!jidsParaTentar.includes(`${numReal}@lid`)) jidsParaTentar.push(`${numReal}@lid`);
+                }
             }
 
-            // 2. Administrador Imunidade
-            if (adminsGlobais.has(numReal) || adminsGlobais.has(idNorm)) {
-                console.log(`👑 [CATRACA - ADMIN] ${numReal} entrou em "${nomeGrupo}" (Imune por ter cargo de Administrador).`);
-                adicionarEventoFeed('ADMIN', `👑 ${numReal} liberado em "${nomeGrupo}" (Imune por Cargo Admin)`);
-                continue;
-            }
-
-            // 3. Atualizar presença na campanha
-            if (!mapaPresencaAlvo.has(idNorm)) mapaPresencaAlvo.set(idNorm, new Set());
-            const gruposDoLead = mapaPresencaAlvo.get(idNorm);
-            gruposDoLead.add(idGrupo);
-
-            console.log(`🚪 [CATRACA] Lead ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}). Presença total: ${gruposDoLead.size}/4 grupos permitidos.`);
-            adicionarEventoFeed('ENTRADA', `🚪 Lead ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}) [${gruposDoLead.size}/4 grupos]`);
-
-            // 4. REGRA DE CATRACA: Se estiver em 5 OU MAIS GRUPOS na mesma campanha (máximo tolerado: 4)
-            if (gruposDoLead.size >= 5) {
-                console.log(`\n🚨 [ALERTA CATRACA - ${tagCampanha}] Lead ${numReal} violou a regra de saturação!`);
-                console.log(`   Presente agora em ${gruposDoLead.size} grupos de ${tagCampanha}. Tentou entrar em: "${nomeGrupo}"`);
-                adicionarEventoFeed('ALERTA', `🚨 Saturação! Lead ${numReal} atingiu ${gruposDoLead.size}/4 grupos em ${tagCampanha}. Grupo: "${nomeGrupo}"`);
-
-                // Candidatos de JID (respeita @lid original e @s.whatsapp.net)
-                const jidsParaTentar = [];
-                if (idNovatoBruto && idNovatoBruto.includes('@')) {
-                    jidsParaTentar.push(idNovatoBruto);
-                }
-                if (numReal) {
-                    if (idNovatoBruto.includes('@lid')) {
-                        if (!jidsParaTentar.includes(`${numReal}@lid`)) jidsParaTentar.push(`${numReal}@lid`);
-                        if (!jidsParaTentar.includes(`${numReal}@s.whatsapp.net`)) jidsParaTentar.push(`${numReal}@s.whatsapp.net`);
-                    } else {
-                        if (!jidsParaTentar.includes(`${numReal}@s.whatsapp.net`)) jidsParaTentar.push(`${numReal}@s.whatsapp.net`);
-                        if (!jidsParaTentar.includes(`${numReal}@lid`)) jidsParaTentar.push(`${numReal}@lid`);
-                    }
-                }
+            // 🛑 REGRA 1: CHECAGEM DE BANIMENTO PERMANENTE (BLACKLIST)
+            if (estaNaBlacklist(numReal) || estaNaBlacklist(idNorm)) {
+                console.log(`\n⛔ [CATRACA - BAN PERMANENTE] Lead banido ${numReal} tentou entrar em "${nomeGrupo}" (${tagCampanha})! EXPULSÃO IMEDIATA.`);
+                adicionarEventoFeed('EXPULSAO', `⛔ [BAN PERMANENTE] ${formatarExibicao(numReal)} tentou entrar em "${nomeGrupo}" e foi expulso imediatamente!`);
 
                 enfileirarKickRealtime({
                     idGrupo,
@@ -679,7 +1201,91 @@ function vincularListenersRealtime(sniper) {
                     numReal,
                     idNorm,
                     jidsParaTentar,
-                    mapaPresencaAlvo
+                    mapaPresencaAlvo,
+                    ehBanPermanente: true
+                });
+                continue;
+            }
+
+            // 🛡️ REGRA 2: IMUNIDADES (WHITELIST & ADMINS)
+            if (estaNaWhitelist(numReal, snipersAtivos) || estaNaWhitelist(idNorm, snipersAtivos)) {
+                console.log(`🛡️ [CATRACA - WHITELIST] ${numReal} entrou em "${nomeGrupo}" (Imune por Whitelist).`);
+                adicionarEventoFeed('WHITELIST', `🛡️ ${formatarExibicao(numReal)} liberado em "${nomeGrupo}" (Imune por Whitelist)`);
+                continue;
+            }
+
+            if (adminsGlobais.has(numReal) || adminsGlobais.has(idNorm)) {
+                console.log(`👑 [CATRACA - ADMIN] ${numReal} entrou em "${nomeGrupo}" (Imune por Cargo Admin).`);
+                adicionarEventoFeed('ADMIN', `👑 ${formatarExibicao(numReal)} liberado em "${nomeGrupo}" (Imune por Cargo Admin)`);
+                continue;
+            }
+
+            // 📊 ATUALIZAÇÃO DA PRESENÇA
+            if (!mapaPresencaAlvo.has(idNorm)) mapaPresencaAlvo.set(idNorm, new Set());
+            const gruposDoLead = mapaPresencaAlvo.get(idNorm);
+            gruposDoLead.add(idGrupo);
+
+            const totalEmBlack = presencaBlack.get(idNorm)?.size || 0;
+            const totalEmBaseForte = presencaBaseForte.get(idNorm)?.size || 0;
+            const totalLinksGeral = totalEmBlack + totalEmBaseForte;
+
+            configAtual = carregarConfig();
+            const limiteMax = configAtual.limiteGruposPorCampanha;
+            const limiteBan = configAtual.limiteBanPermanente;
+
+            console.log(`🚪 [CATRACA] Lead ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}). Presença na campanha: ${gruposDoLead.size}/${limiteMax} permitidos. Total de links geral: ${totalLinksGeral}.`);
+            adicionarEventoFeed('ENTRADA', `🚪 Lead ${formatarExibicao(numReal)} entrou em "${nomeGrupo}" [${gruposDoLead.size}/${limiteMax} grps | Total geral: ${totalLinksGeral}]`);
+
+            // 💀 REGRA 3: BAN PERMANENTE SE ULTRAPASSAR O LIMITE DE LINKS (> limiteBan)
+            if (totalLinksGeral > limiteBan || gruposDoLead.size > limiteBan) {
+                console.log(`\n🚨💀 [CATRACA - BAN PERMANENTE ATIVADO] Lead ${numReal} atingiu ${totalLinksGeral} links (> limite ${limiteBan})!`);
+                adicionarEventoFeed('BAN_PERMANENTE', `💀 [BAN PERMANENTE ATIVADO] ${formatarExibicao(numReal)} atingiu ${totalLinksGeral} links (> limite ${limiteBan}). Banido e expulso de TODOS os grupos!`);
+
+                if (!estaNaBlacklist(numReal)) {
+                    cacheBlacklist.unshift({
+                        numero: numReal,
+                        numeroFormatado: formatarExibicao(numReal),
+                        motivo: `Atingiu ${totalLinksGeral} links/grupos em tempo real (Limite máximo: ${limiteBan})`,
+                        dataBanimento: new Date().toISOString(),
+                        totalGrupos: totalLinksGeral
+                    });
+                    salvarBlacklist(cacheBlacklist);
+                }
+
+                const todosGruposDoLead = new Set([
+                    ...(presencaBlack.get(idNorm) || []),
+                    ...(presencaBaseForte.get(idNorm) || [])
+                ]);
+
+                for (const gid of todosGruposDoLead) {
+                    enfileirarKickRealtime({
+                        idGrupo: gid,
+                        nomeGrupo: obterNomeGrupo(gid),
+                        tagCampanha,
+                        numReal,
+                        idNorm,
+                        jidsParaTentar,
+                        mapaPresencaAlvo,
+                        ehBanPermanente: true
+                    });
+                }
+                continue;
+            }
+
+            // ⚖️ REGRA 4: SATURAÇÃO NORMAL (> limiteMax)
+            if (gruposDoLead.size > limiteMax) {
+                console.log(`\n🚨 [ALERTA CATRACA - ${tagCampanha}] Lead ${numReal} violou a regra de saturação! (${gruposDoLead.size}/${limiteMax} permitidos)`);
+                adicionarEventoFeed('ALERTA', `🚨 Saturação! Lead ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size}/${limiteMax} grupos em ${tagCampanha}. Grupo: "${nomeGrupo}"`);
+
+                enfileirarKickRealtime({
+                    idGrupo,
+                    nomeGrupo,
+                    tagCampanha,
+                    numReal,
+                    idNorm,
+                    jidsParaTentar,
+                    mapaPresencaAlvo,
+                    ehBanPermanente: false
                 });
             }
         }
@@ -690,6 +1296,9 @@ function vincularListenersRealtime(sniper) {
 // 🚀 INICIALIZADOR DO MOTOR UNIFICADO
 // =====================================================================
 async function iniciarOperacaoAegisCompleta() {
+    configAtual = carregarConfig();
+    const qtdAdms = configAtual.quantidadeAdms || 4;
+
     console.clear();
     console.log(`
  █████╗ ███████╗ ██████╗ ██╗███████╗    ██████╗ ██╗      █████╗  ██████╗██╗  ██╗
@@ -700,34 +1309,31 @@ async function iniciarOperacaoAegisCompleta() {
 ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
     `);
     console.log('🛡️  MOTOR UNIFICADO AEGIS: BLACK VITALÍCIA & DESAFIO BASE FORTE');
-    console.log('📌  Alvos: 28 Grupos Black + 28 Grupos Base Forte (56 grupos vigiados)');
-    console.log('⚖️  Regra: Limite de tolerância de até 4 Grupos por campanha (5+ grupos = expulsão)');
+    console.log(`📌  Configuração Atual: Máx. ${configAtual.limiteGruposPorCampanha} Grupos por pessoa | Ban Permanente: > ${configAtual.limiteBanPermanente} links`);
+    console.log(`🤖  Frota de ADMs (Administradores dos Grupos): ${qtdAdms} contas configuradas`);
     console.log('=================================================================\n');
 
-    console.log(`[+] Conectando frota de ${QTD_SNIPERS} Snipers...`);
-    for (let i = 1; i <= QTD_SNIPERS; i++) {
+    console.log(`[+] Conectando frota de ${qtdAdms} Administradores...`);
+    for (let i = 1; i <= qtdAdms; i++) {
         await conectarSniper(i);
     }
 
     if (snipersAtivos.length === 0) {
-        console.warn('⚠️ [AVISO] Nenhum Sniper com sessão válida pôde ser conectado no momento.');
-        console.log('📌 O Painel Web continua 100% ativo. Envie suas sessões pelo site para conectar os Snipers.');
-        adicionarEventoFeed('SISTEMA', '⚠️ Nenhum Sniper conectado. Envie as credenciais pelo Painel Web.');
+        console.warn('⚠️ [AVISO] Nenhum ADM com sessão salva pôde ser conectado no momento.');
+        console.log('📌 O Painel Web está 100% ativo. Acesse o navegador para conectar seus ADMs via QR Code ou Código.');
+        adicionarEventoFeed('SISTEMA', '⚠️ Nenhum ADM conectado. Conecte pelo Painel Web via QR Code ou Código de Pareamento.');
         return;
     }
 
-    console.log(`\n✅ ${snipersAtivos.length} Snipers armados e operacionais.`);
+    console.log(`\n✅ ${snipersAtivos.length} Administradores (ADMs) armados e de olho nos grupos.`);
 
-    // 1. Executa Limpeza Inicial (Black primeiro, depois Base Forte)
     await executarLimpezaInicial();
 
-    // 2. Transita para o Sentinela Catraca 24/7 nos dois ecossistemas
     console.log('\n=================================================================');
     console.log('🟢 [SENTINELA ATIVO 24/7] VIGIANDO BLACK VITALÍCIA & BASE FORTE!');
-    console.log('   • 56 grupos vigiados simultaneamente em tempo real.');
-    console.log('   • Qualquer pessoa que atingir 5 ou mais grupos de uma campanha será expulsa na hora.');
-    console.log('   • Whitelist e Administradores 100% imunes.');
-    console.log('   • Pressione Ctrl+C para encerrar quando desejar.');
+    console.log(`   • Tolerância de Saturação: até ${configAtual.limiteGruposPorCampanha} grupos.`);
+    console.log(`   • Ban Permanente Automático: acima de ${configAtual.limiteBanPermanente} links = Remoção total sem exceção.`);
+    console.log('   • Whitelist da Equipe 100% protegida.');
     console.log('=================================================================\n');
 
     sentinelaRealtimeAtivo = true;
@@ -745,5 +1351,19 @@ module.exports = {
     recarregarWhitelist,
     obterEstadoAegis,
     feedEventos,
-    adicionarEventoFeed
+    adicionarEventoFeed,
+    carregarConfig,
+    salvarConfig,
+    carregarBlacklist,
+    salvarBlacklist,
+    estaNaBlacklist,
+    banirPermanente,
+    desbanir,
+    obterStatusAdms,
+    conectarAdmManual,
+    desconectarAdm,
+    // Aliases para compatibilidade total
+    obterStatusEspioes: obterStatusAdms,
+    conectarEspiaoManual: conectarAdmManual,
+    desconectarEspiao: desconectarAdm
 };

@@ -1,7 +1,7 @@
 // =====================================================================
 // 🛡️ AEGIS C2 // SERVIDOR WEB & CONTROLADOR DO MOTOR ANTI-HACKER
 // Servidor unificado para Easypanel / Docker / Nuvem
-// Painel Web de Gestão de Whitelist + Motor Operação Aegis 24/7
+// Painel Web: Whitelist + Gestão de Espiões (QR & Código) + Blacklist + Limites
 // =====================================================================
 const express = require('express');
 const path = require('path');
@@ -11,7 +11,17 @@ const {
     iniciarOperacaoAegisCompleta,
     recarregarWhitelist,
     obterEstadoAegis,
-    feedEventos
+    feedEventos,
+    carregarConfig,
+    salvarConfig,
+    carregarBlacklist,
+    salvarBlacklist,
+    estaNaBlacklist,
+    banirPermanente,
+    desbanir,
+    obterStatusEspioes,
+    conectarEspiaoManual,
+    desconectarEspiao
 } = require('./operacao_black_aegis');
 
 const app = express();
@@ -20,6 +30,8 @@ const PORT = process.env.PORT || 3000;
 // Arquivos de dados persistentes
 const ARQUIVO_WHITELIST = path.join(__dirname, 'whitelist_aegis.json');
 const ARQUIVO_METADATA = path.join(__dirname, 'whitelist_metadata.json');
+const ARQUIVO_BLACKLIST = path.join(__dirname, 'blacklist_aegis.json');
+const ARQUIVO_CONFIG = path.join(__dirname, 'config_aegis.json');
 
 // Middlewares
 app.use(express.json({ limit: '10mb' }));
@@ -84,15 +96,11 @@ function carregarMetadata() {
     }
 }
 
-function salvarDados(lista, meta) {
-    // 1. Salva whitelist em formato array puro (compatível 100% com Baileys e scripts legados)
+function salvarDadosWhitelist(lista, meta) {
     const listaUnica = Array.from(new Set(lista.map(extrairNumeroLimpo).filter(Boolean)));
     fs.writeFileSync(ARQUIVO_WHITELIST, JSON.stringify(listaUnica, null, 2), 'utf-8');
-
-    // 2. Salva metadata detalhada (nomes, cargos, data)
     fs.writeFileSync(ARQUIVO_METADATA, JSON.stringify(meta, null, 2), 'utf-8');
 
-    // 3. Atualiza cache em RAM do Aegis instantaneamente
     try {
         recarregarWhitelist();
     } catch (e) { }
@@ -109,6 +117,178 @@ app.get('/health', (req, res) => {
         uptime: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
     });
+});
+
+// =====================================================================
+// ⚙️ ROTAS DE CONFIGURAÇÃO & LIMITES
+// =====================================================================
+app.get('/api/config', (req, res) => {
+    try {
+        const config = carregarConfig();
+        res.json({
+            sucesso: true,
+            config
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+app.post('/api/config', (req, res) => {
+    try {
+        const { limiteGruposPorCampanha, quantidadeEspioes, limiteBanPermanente } = req.body;
+        const configAtualizada = salvarConfig({
+            limiteGruposPorCampanha,
+            quantidadeEspioes,
+            limiteBanPermanente
+        });
+        res.json({
+            sucesso: true,
+            mensagem: 'Configurações atualizadas com sucesso!',
+            config: configAtualizada
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// =====================================================================
+// 🤖 ROTAS DE GESTÃO DE ADMINISTRADORES / ADMS (QR CODE, CÓDIGO E STATUS)
+// =====================================================================
+const listarAdmsHandler = (req, res) => {
+    try {
+        const adms = obterStatusAdms();
+        res.json({
+            sucesso: true,
+            total: adms.length,
+            conectados: adms.filter(e => e.conectado).length,
+            adms,
+            espioes: adms
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+};
+
+const conectarQrHandler = async (req, res) => {
+    try {
+        const indice = Number(req.params.indice);
+        if (!indice || indice < 1) {
+            return res.status(400).json({ sucesso: false, erro: 'Índice de administrador inválido.' });
+        }
+
+        conectarAdmManual({ indice, tipoConexao: 'qr' }).catch(err => {
+            console.error(`[!] Erro no ADM 0${indice} (QR):`, err.message);
+        });
+
+        res.json({
+            sucesso: true,
+            mensagem: `Iniciando geração do QR Code para o Administrador 0${indice}...`
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+};
+
+const conectarCodigoHandler = async (req, res) => {
+    try {
+        const indice = Number(req.params.indice);
+        const { telefone } = req.body;
+
+        if (!indice || indice < 1) {
+            return res.status(400).json({ sucesso: false, erro: 'Índice de administrador inválido.' });
+        }
+
+        const numFormatado = normalizarTelefoneBR(telefone);
+        if (!numFormatado || numFormatado.length < 10) {
+            return res.status(400).json({ sucesso: false, erro: 'Digite um número de WhatsApp válido com DDD.' });
+        }
+
+        conectarAdmManual({ indice, tipoConexao: 'codigo', numeroTelefone: numFormatado }).catch(err => {
+            console.error(`[!] Erro no ADM 0${indice} (Código):`, err.message);
+        });
+
+        res.json({
+            sucesso: true,
+            mensagem: `Solicitando código de pareamento para o número ${formatarExibicao(numFormatado)}...`
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+};
+
+const desconectarAdmHandler = async (req, res) => {
+    try {
+        const indice = Number(req.params.indice);
+        if (!indice || indice < 1) {
+            return res.status(400).json({ sucesso: false, erro: 'Índice de administrador inválido.' });
+        }
+
+        const resultado = await desconectarAdm(indice);
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+};
+
+// Mapeamento duplo para suportar tanto /api/adms quanto /api/espioes
+app.get('/api/adms', listarAdmsHandler);
+app.get('/api/espioes', listarAdmsHandler);
+
+app.post('/api/adms/:indice/conectar-qr', conectarQrHandler);
+app.post('/api/espioes/:indice/conectar-qr', conectarQrHandler);
+
+app.post('/api/adms/:indice/conectar-codigo', conectarCodigoHandler);
+app.post('/api/espioes/:indice/conectar-codigo', conectarCodigoHandler);
+
+app.post('/api/adms/:indice/desconectar', desconectarAdmHandler);
+app.post('/api/espioes/:indice/desconectar', desconectarAdmHandler);
+
+// =====================================================================
+// ⛔ ROTAS DE GESTÃO DE BLACKLIST (BANIDOS PERMANENTES)
+// =====================================================================
+app.get('/api/blacklist', (req, res) => {
+    try {
+        const banidos = carregarBlacklist();
+        res.json({
+            sucesso: true,
+            total: banidos.length,
+            banidos
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+app.post('/api/blacklist', async (req, res) => {
+    try {
+        const { numero, motivo } = req.body;
+        if (!numero) {
+            return res.status(400).json({ sucesso: false, erro: 'Número de telefone é obrigatório.' });
+        }
+
+        const numFormatado = normalizarTelefoneBR(numero);
+        if (numFormatado.length < 10) {
+            return res.status(400).json({ sucesso: false, erro: 'Número inválido. Digite DDD + Telefone.' });
+        }
+
+        const resultado = await banirPermanente(numFormatado, motivo || 'Banimento Permanente Manual');
+        res.json(resultado);
+    } catch (err) {
+        res.status(400).json({ sucesso: false, erro: err.message });
+    }
+});
+
+app.delete('/api/blacklist/:numero', (req, res) => {
+    try {
+        const resultado = desbanir(req.params.numero);
+        if (!resultado.sucesso) {
+            return res.status(404).json(resultado);
+        }
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
 });
 
 // =====================================================================
@@ -138,7 +318,7 @@ app.get('/api/whitelist', (req, res) => {
     }
 });
 
-// Cadastrar número único
+// Cadastrar número único na Whitelist
 app.post('/api/whitelist', (req, res) => {
     try {
         const { numero, nome } = req.body;
@@ -155,12 +335,11 @@ app.post('/api/whitelist', (req, res) => {
         const meta = carregarMetadata();
 
         if (lista.includes(numFormatado)) {
-            // Se já existia, atualiza apenas o nome
             meta[numFormatado] = {
                 nome: nome?.trim() || meta[numFormatado]?.nome || 'Administrador',
                 adicionadoEm: meta[numFormatado]?.adicionadoEm || new Date().toISOString()
             };
-            salvarDados(lista, meta);
+            salvarDadosWhitelist(lista, meta);
             return res.json({
                 sucesso: true,
                 mensagem: `O número ${formatarExibicao(numFormatado)} já estava na Whitelist. Informações atualizadas!`,
@@ -175,7 +354,7 @@ app.post('/api/whitelist', (req, res) => {
             adicionadoEm: new Date().toISOString()
         };
 
-        salvarDados(lista, meta);
+        salvarDadosWhitelist(lista, meta);
 
         res.json({
             sucesso: true,
@@ -201,7 +380,6 @@ app.post('/api/whitelist/bulk', (req, res) => {
             return res.status(400).json({ sucesso: false, erro: 'Cole uma lista de números válida.' });
         }
 
-        // Divide por linhas, vírgulas, ponto e vírgula
         const linhas = texto.split(/[\r\n,;]+/);
         const lista = carregarListaWhitelist();
         const meta = carregarMetadata();
@@ -230,7 +408,7 @@ app.post('/api/whitelist/bulk', (req, res) => {
             adicionados++;
         }
 
-        salvarDados(lista, meta);
+        salvarDadosWhitelist(lista, meta);
 
         res.json({
             sucesso: true,
@@ -245,7 +423,7 @@ app.post('/api/whitelist/bulk', (req, res) => {
     }
 });
 
-// Remover administrador
+// Remover administrador da Whitelist
 app.delete('/api/whitelist/:numero', (req, res) => {
     try {
         const numAlvo = extrairNumeroLimpo(req.params.numero);
@@ -264,7 +442,7 @@ app.delete('/api/whitelist/:numero', (req, res) => {
         lista.splice(index, 1);
         delete meta[numAlvo];
 
-        salvarDados(lista, meta);
+        salvarDadosWhitelist(lista, meta);
 
         res.json({
             sucesso: true,
@@ -327,7 +505,7 @@ function formatarUptime(segundos) {
 }
 
 // =====================================================================
-// 📦 BACKUP E RESTAURAÇÃO DE SESSÕES (FÁCIL MIGRAÇÃO PARA EASYPANEL)
+// 📦 BACKUP E RESTAURAÇÃO DE SESSÕES & DADOS
 // =====================================================================
 
 // Baixar Whitelist em JSON
@@ -342,29 +520,40 @@ app.get('/api/backup/whitelist', (req, res) => {
     }
 });
 
-// Baixar Sessões dos 4 Snipers em ZIP
+// Baixar Blacklist em JSON
+app.get('/api/backup/blacklist', (req, res) => {
+    try {
+        if (!fs.existsSync(ARQUIVO_BLACKLIST)) {
+            return res.status(404).send('Arquivo não encontrado');
+        }
+        res.download(ARQUIVO_BLACKLIST, 'blacklist_aegis.json');
+    } catch (e) {
+        res.status(500).send(e.message);
+    }
+});
+
+// Baixar Sessões de Todos os Espiões em ZIP
 app.get('/api/backup/sessoes', (req, res) => {
     try {
         const zip = new AdmZip();
         let encontrou = false;
 
-        for (let i = 1; i <= 4; i++) {
-            const pasta = path.join(__dirname, `auth_sniper_${i}`);
-            if (fs.existsSync(pasta)) {
-                zip.addLocalFolder(pasta, `auth_sniper_${i}`);
+        // Escaneia pastas auth_sniper_* e auth_spotter_*
+        const arquivos = fs.readdirSync(__dirname);
+        for (const item of arquivos) {
+            if ((item.startsWith('auth_sniper_') || item.startsWith('auth_spotter_')) && fs.statSync(path.join(__dirname, item)).isDirectory()) {
+                zip.addLocalFolder(path.join(__dirname, item), item);
                 encontrou = true;
             }
         }
 
-        if (fs.existsSync(ARQUIVO_WHITELIST)) {
-            zip.addLocalFile(ARQUIVO_WHITELIST);
-        }
-        if (fs.existsSync(ARQUIVO_METADATA)) {
-            zip.addLocalFile(ARQUIVO_METADATA);
-        }
+        if (fs.existsSync(ARQUIVO_WHITELIST)) zip.addLocalFile(ARQUIVO_WHITELIST);
+        if (fs.existsSync(ARQUIVO_METADATA)) zip.addLocalFile(ARQUIVO_METADATA);
+        if (fs.existsSync(ARQUIVO_BLACKLIST)) zip.addLocalFile(ARQUIVO_BLACKLIST);
+        if (fs.existsSync(ARQUIVO_CONFIG)) zip.addLocalFile(ARQUIVO_CONFIG);
 
         if (!encontrou) {
-            return res.status(404).json({ sucesso: false, erro: 'Nenhuma pasta de sessão auth_sniper_* encontrada.' });
+            return res.status(404).json({ sucesso: false, erro: 'Nenhuma pasta de sessão auth_* encontrada.' });
         }
 
         const buffer = zip.toBuffer();
@@ -386,30 +575,30 @@ app.post('/api/restore/sessoes', express.raw({ type: 'application/zip', limit: '
         const zip = new AdmZip(req.body);
         zip.extractAllTo(__dirname, true);
 
-        // Atualiza whitelist se veio no zip
         recarregarWhitelist();
+        carregarBlacklist();
+        carregarConfig();
 
-        // Dispara a conexão dos snipers automaticamente
         setTimeout(() => {
-            console.log('[🚀] Conectando Snipers após restauração das credenciais...');
+            console.log('[🚀] Conectando Espiões após restauração das credenciais...');
             iniciarOperacaoAegisCompleta().catch(e => console.error('[!] Falha ao iniciar após restore:', e));
         }, 1200);
 
         res.json({
             sucesso: true,
-            mensagem: 'Sessões restauradas com sucesso! Conectando Snipers no servidor...'
+            mensagem: 'Sessões restauradas com sucesso! Conectando Espiões no servidor...'
         });
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
     }
 });
 
-// Forçar conexão dos Snipers manualmente pelo painel
+// Forçar conexão de todos os espiões manualmente pelo painel
 app.post('/api/snipers/conectar', (req, res) => {
     try {
-        console.log('[🚀] Disparo manual de conexão dos Snipers solicitado pelo Painel Web...');
-        iniciarOperacaoAegisCompleta().catch(e => console.error('[!] Erro ao conectar Snipers:', e));
-        res.json({ sucesso: true, mensagem: 'Comando de conexão enviado aos Snipers.' });
+        console.log('[🚀] Disparo manual de conexão dos Espiões solicitado pelo Painel Web...');
+        iniciarOperacaoAegisCompleta().catch(e => console.error('[!] Erro ao conectar Espiões:', e));
+        res.json({ sucesso: true, mensagem: 'Comando de conexão enviado aos Espiões.' });
     } catch (e) {
         res.status(500).json({ sucesso: false, erro: e.message });
     }
@@ -421,10 +610,9 @@ app.post('/api/snipers/conectar', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n=================================================================');
     console.log(`🌐 [AEGIS C2] PAINEL WEB ATIVO NA PORTA: http://0.0.0.0:${PORT}`);
-    console.log('📌  Acesse no navegador para gerenciar a Whitelist e ver o feed da Catraca.');
+    console.log('📌  Acesse no navegador para gerenciar Whitelist, Espiões, Blacklist e Limites.');
     console.log('=================================================================\n');
 
-    // Inicia o motor WhatsApp em segundo plano automaticamente (salvo se START_BOT=false)
     if (process.env.START_BOT !== 'false') {
         setTimeout(() => {
             console.log('[🚀] Disparando Motor Aegis 24/7 (Black Vitalícia + Base Forte)...');

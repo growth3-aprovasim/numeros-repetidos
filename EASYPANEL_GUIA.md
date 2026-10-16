@@ -8,12 +8,12 @@ Este guia explica exatamente como colocar o motor Aegis e o Painel Web de Admini
 
 1. **Painel Web C2 Integrado (`http://seu-servidor:3000`)**:
    - Interface visual moderna em Dark Glassmorphism, rápida e fácil de usar.
-   - **Cadastro Individual:** digite o DDD + Número (formatação automática) e nome/cargo opcional.
-   - **Importação em Massa:** cole dezenas de números de uma só vez (separados por vírgula ou linhas).
-   - **Busca Rápida:** encontre qualquer administrador digitando parte do número ou nome.
-   - **Cópia em 1 Clique:** botão para copiar todos os números da Whitelist de uma vez só.
-   - **Radar da Catraca em Tempo Real:** feed com as entradas, checagens e expulsões em tempo real.
-   - **Telemetria dos Snipers:** veja quais dos 4 snipers estão armados e online.
+   - **Central de Conexão dos Espiões (NOVO):** conecte quantos espiões desejar diretamente pelo site via **QR Code** ou **Código de Pareamento** por número de telefone. Escolha e altere a quantidade de espiões ativos a qualquer momento!
+   - **Regras e Limites Customizáveis (NOVO):** escolha o limite de grupos permitidos e o gatilho para **Ban Permanente** (padrão > 10 links).
+   - **Blacklist Permanente com Remoção Total (NOVO):** se alguém exceder o limite de links, é banida permanentemente, removida de **TODOS OS GRUPOS SEM EXCEÇÃO** e expulsa imediatamente se tentar voltar. Possui lista com busca, desbanimento e ban manual.
+   - **Gestão de Whitelist:** cadastro individual e importação em lote com busca rápida e cópia em 1 clique.
+   - **Radar da Catraca em Tempo Real:** feed com entradas de leads, liberações por imunidade, checagens de saturação e expulsões imediatas.
+   - **Telemetria Completa:** status e números conectados de todos os espiões, memória RAM e uptime.
 
 2. **Sincronização Instantânea com o WhatsApp**:
    - Toda alteração feita no site atualiza a memória do bot **imediatamente**.
@@ -23,7 +23,7 @@ Este guia explica exatamente como colocar o motor Aegis e o Painel Web de Admini
    - [Dockerfile](file:///c:/Users/Usuario/Desktop/Teste%20Projeto%20Espi%C3%A3o/OperationAegis%20[Black%2026]/Dockerfile): Imagem oficial Node 20 com ferramentas de build e fuso horário oficial de Brasília (`America/Sao_Paulo`).
    - [.dockerignore](file:///c:/Users/Usuario/Desktop/Teste%20Projeto%20Espi%C3%A3o/OperationAegis%20[Black%2026]/.dockerignore): Remove arquivos desnecessários para um build rápido e limpo.
    - [server.js](file:///c:/Users/Usuario/Desktop/Teste%20Projeto%20Espi%C3%A3o/OperationAegis%20[Black%2026]/server.js): Inicializador unificado que sobe o Painel Web e o Sentinela Aegis juntos.
-   - [exportar_sessoes.js](file:///c:/Users/Usuario/Desktop/Teste%20Projeto%20Espi%C3%A3o/OperationAegis%20[Black%2026]/exportar_sessoes.js): Script para empacotar seus logins existentes do WhatsApp em um arquivo `.zip`.
+   - [exportar_sessoes.js](file:///c:/Users/Usuario/Desktop/Teste%20Projeto%20Espi%C3%A3o/OperationAegis%20[Black%2026]/exportar_sessoes.js): Script para empacotar todos os logins existentes e arquivos de configuração em um arquivo `.zip`.
 
 ---
 

@@ -1,13 +1,13 @@
 // =====================================================================
-// 📦 EXPORTADOR DE SESSÕES DOS SNIPERS (PARA MIGRAÇÃO AO EASYPANEL)
-// Empacota auth_sniper_1 até 4 e a Whitelist em um arquivo .zip
+// 📦 EXPORTADOR DE SESSÕES DOS ESPIÕES / SNIPERS (PARA MIGRAÇÃO AO EASYPANEL)
+// Empacota todas as pastas de sessões auth_* e os dados do sistema em um .zip
 // =====================================================================
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 
 console.log('=================================================================');
-console.log('📦  EMPACOTADOR DE SESSÕES DOS SNIPERS // AEGIS C2');
+console.log('📦  EMPACOTADOR DE SESSÕES & DADOS // AEGIS C2');
 console.log('=================================================================\n');
 
 const ARQUIVO_SAIDA = path.join(__dirname, 'aegis_sessoes_snipers.zip');
@@ -15,32 +15,33 @@ const zip = new AdmZip();
 
 let pastasEncontradas = 0;
 
-for (let i = 1; i <= 4; i++) {
-    const pasta = path.join(__dirname, `auth_sniper_${i}`);
-    if (fs.existsSync(pasta)) {
-        console.log(`[+] Compactando auth_sniper_${i}...`);
-        zip.addLocalFolder(pasta, `auth_sniper_${i}`);
+// Escaneia todas as pastas auth_* na raiz do projeto
+const itens = fs.readdirSync(__dirname);
+for (const item of itens) {
+    if ((item.startsWith('auth_sniper_') || item.startsWith('auth_spotter_')) && fs.statSync(path.join(__dirname, item)).isDirectory()) {
+        console.log(`[+] Compactando pasta ${item}...`);
+        zip.addLocalFolder(path.join(__dirname, item), item);
         pastasEncontradas++;
-    } else {
-        console.log(`[-] auth_sniper_${i} não encontrada (pulando).`);
     }
 }
 
-const arquivoWhitelist = path.join(__dirname, 'whitelist_aegis.json');
-if (fs.existsSync(arquivoWhitelist)) {
-    console.log('[+] Adicionando whitelist_aegis.json ao pacote...');
-    zip.addLocalFile(arquivoWhitelist);
-}
+const arquivosParaAdicionar = [
+    'whitelist_aegis.json',
+    'whitelist_metadata.json',
+    'blacklist_aegis.json',
+    'config_aegis.json'
+];
 
-const arquivoMetadata = path.join(__dirname, 'whitelist_metadata.json');
-if (fs.existsSync(arquivoMetadata)) {
-    console.log('[+] Adicionando whitelist_metadata.json ao pacote...');
-    zip.addLocalFile(arquivoMetadata);
+for (const arq of arquivosParaAdicionar) {
+    const p = path.join(__dirname, arq);
+    if (fs.existsSync(p)) {
+        console.log(`[+] Adicionando ${arq} ao pacote...`);
+        zip.addLocalFile(p);
+    }
 }
 
 if (pastasEncontradas === 0) {
-    console.error('\n❌ Nenhuma pasta de sessão auth_sniper_* foi encontrada.');
-    process.exit(1);
+    console.warn('\n⚠️ Nenhuma pasta de sessão auth_* foi encontrada. Compactando apenas arquivos de configuração.');
 }
 
 console.log('\n[*] Escrevendo arquivo zip...');

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEGIS C2 // Painel de Controle e Whitelist</title>
-    <meta name="description" content="Painel de Controle Central do Motor Aegis Anti-Hacker para WhatsApp - Gestão de Administradores, Whitelist e Catraca 24/7">
+    <title>AEGIS C2 // Central de Defesa & Sentinela WhatsApp</title>
+    <meta name="description" content="Painel de Controle Central do Motor Aegis Anti-Hacker para WhatsApp - Gestão de ADMs dos Grupos, Whitelist (Equipe Imune), Blacklist Permanente e Catraca 24/7">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,9 +34,9 @@
                 <div class="brand-info">
                     <div class="brand-title-wrap">
                         <h1 class="brand-title">AEGIS // C2 SENTINEL</h1>
-                        <span class="version-tag">v7.8 PROD</span>
+                        <span class="version-tag">v8.0 ULTRA</span>
                     </div>
-                    <p class="brand-subtitle">Operação Black Vitalícia & Desafio Base Forte (56 Grupos Protegidos)</p>
+                    <p class="brand-subtitle">Operação Black Vitalícia & Desafio Base Forte (56 Grupos Protegidos 24/7)</p>
                 </div>
             </div>
 
@@ -57,37 +57,45 @@
         <section class="metrics-grid" id="metrics-grid">
             <div class="metric-card card-emerald" id="card-metric-admins">
                 <div class="metric-header">
-                    <span class="metric-label">ADMINISTRADORES NA WHITELIST</span>
+                    <span class="metric-label">WHITELIST (EQUIPE IMUNE)</span>
                     <span class="metric-icon-badge">👑</span>
                 </div>
                 <div class="metric-value" id="val-total-admins">--</div>
                 <div class="metric-footer">
-                    <span class="sub-text">100% Imunes à Catraca nos 56 Grupos</span>
+                    <span class="sub-text">100% Imunes à Catraca</span>
                 </div>
             </div>
 
-            <div class="metric-card card-cyan" id="card-metric-snipers">
+            <div class="metric-card card-cyan" id="card-metric-espioes">
                 <div class="metric-header">
-                    <span class="metric-label">FROTA DE SNIPERS</span>
-                    <span class="metric-icon-badge">🎯</span>
+                    <span class="metric-label">ADMs DOS GRUPOS CONECTADOS</span>
+                    <span class="metric-icon-badge">🛡️</span>
                 </div>
-                <div class="metric-value" id="val-snipers-status">-- / 4</div>
-                <div class="metric-footer" id="snipers-indicators-row">
-                    <span class="sniper-dot" id="dot-sniper-1" title="Sniper 01">01</span>
-                    <span class="sniper-dot" id="dot-sniper-2" title="Sniper 02">02</span>
-                    <span class="sniper-dot" id="dot-sniper-3" title="Sniper 03">03</span>
-                    <span class="sniper-dot" id="dot-sniper-4" title="Sniper 04">04</span>
+                <div class="metric-value" id="val-espioes-status">-- / --</div>
+                <div class="metric-footer" id="espioes-indicators-row">
+                    <!-- Dots gerados dinamicamente via JS -->
                 </div>
             </div>
 
             <div class="metric-card card-amber" id="card-metric-policy">
                 <div class="metric-header">
-                    <span class="metric-label">REGRA DE SATURAÇÃO</span>
+                    <span class="metric-label">SATURAÇÃO PERMITIDA</span>
                     <span class="metric-icon-badge">⚖️</span>
                 </div>
-                <div class="metric-value">MÁX. 4</div>
+                <div class="metric-value" id="val-metric-limite-grupos">MÁX. 4</div>
                 <div class="metric-footer">
-                    <span class="sub-text">5+ grupos na mesma campanha = Expulsão imediata</span>
+                    <span class="sub-text" id="val-metric-desc-saturacao">Excedentes são removidos mantendo 1</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-rose" id="card-metric-blacklist">
+                <div class="metric-header">
+                    <span class="metric-label">BANIDOS PERMANENTES</span>
+                    <span class="metric-icon-badge">⛔</span>
+                </div>
+                <div class="metric-value" id="val-total-blacklist">0</div>
+                <div class="metric-footer">
+                    <span class="sub-text" id="val-metric-desc-ban">Gatilho: > 10 links = Ban Total</span>
                 </div>
             </div>
 
@@ -103,185 +111,384 @@
             </div>
         </section>
 
+        <!-- BARRA DE NAVEGAÇÃO PRINCIPAL (ABAS DE MÓDULOS) -->
+        <nav class="main-nav-bar" id="main-nav-bar">
+            <button class="nav-tab-btn active" id="nav-btn-whitelist" data-view="whitelist">
+                <span class="nav-tab-icon">👑</span>
+                <span class="nav-tab-label">Whitelist (Equipe Imune)</span>
+                <span class="nav-tab-badge" id="nav-badge-whitelist">0</span>
+            </button>
+            <button class="nav-tab-btn" id="nav-btn-espioes" data-view="espioes">
+                <span class="nav-tab-icon">🛡️</span>
+                <span class="nav-tab-label">ADMs dos Grupos (QR & Código)</span>
+                <span class="nav-tab-badge badge-cyan" id="nav-badge-espioes">0/4</span>
+            </button>
+            <button class="nav-tab-btn" id="nav-btn-blacklist" data-view="blacklist">
+                <span class="nav-tab-icon">⛔</span>
+                <span class="nav-tab-label">Blacklist (Banidos)</span>
+                <span class="nav-tab-badge badge-rose" id="nav-badge-blacklist">0</span>
+            </button>
+            <button class="nav-tab-btn" id="nav-btn-config" data-view="config">
+                <span class="nav-tab-icon">⚙️</span>
+                <span class="nav-tab-label">Configurações & Limites</span>
+            </button>
+        </nav>
+
         <!-- LAYOUT DE DUAS COLUNAS PRINCIPAIS -->
         <main class="main-content-grid">
-            <!-- COLUNA ESQUERDA: FORMULÁRIO DE CADASTRO -->
+            
+            <!-- COLUNA ESQUERDA: VISTAS ALTERNÁVEIS (WHITELIST / ESPIÕES / BLACKLIST / CONFIG) -->
             <div class="content-column left-column">
                 
-                <!-- CARD DE CADASTRO -->
-                <section class="glass-card" id="card-cadastro-whitelist">
-                    <div class="card-header">
-                        <div class="card-title-group">
-                            <h2 class="card-title">🛡️ Cadastrar Administrador (Whitelist)</h2>
-                            <p class="card-subtitle">Números cadastrados aqui nunca serão expulsos da Black Vitalícia nem da Base Forte.</p>
-                        </div>
-                    </div>
-
-                    <!-- ABAS DE NAVEGAÇÃO DO FORMULÁRIO -->
-                    <div class="tabs-nav" id="cadastro-tabs-nav">
-                        <button class="tab-btn active" id="tab-btn-single" data-tab="single">
-                            <span class="tab-icon">➕</span> Cadastro Individual
-                        </button>
-                        <button class="tab-btn" id="tab-btn-bulk" data-tab="bulk">
-                            <span class="tab-icon">⚡</span> Colar Lista em Massa
-                        </button>
-                    </div>
-
-                    <!-- CONTEÚDO DA ABA 1: NÚMERO ÚNICO -->
-                    <div class="tab-content active" id="tab-content-single">
-                        <form id="form-add-admin" class="admin-form" autocomplete="off">
-                            <div class="form-group">
-                                <label for="input-telefone" class="form-label">
-                                    Número do WhatsApp com DDD:
-                                    <span class="required">*</span>
-                                </label>
-                                <div class="input-with-icon">
-                                    <span class="input-icon">📱</span>
-                                    <input 
-                                        type="tel" 
-                                        id="input-telefone" 
-                                        name="telefone" 
-                                        class="form-input" 
-                                        placeholder="(11) 99999-9999 ou 5511999999999" 
-                                        required
-                                        autofocus
-                                    >
-                                </div>
-                                <span class="input-help">O DDI 55 será adicionado automaticamente caso você digite apenas DDD + Número.</span>
+                <!-- ============================================================= -->
+                <!-- VISTA 1: WHITELIST (ADMINISTRADORES) -->
+                <!-- ============================================================= -->
+                <div class="module-view active" id="view-whitelist">
+                    
+                    <!-- CARD DE CADASTRO -->
+                    <section class="glass-card" id="card-cadastro-whitelist">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <h2 class="card-title">🛡️ Cadastrar Administrador (Whitelist)</h2>
+                                <p class="card-subtitle">Números cadastrados aqui nunca serão expulsos da Black Vitalícia nem da Base Forte.</p>
                             </div>
+                        </div>
 
-                            <div class="form-group">
-                                <label for="input-nome" class="form-label">
-                                    Nome / Cargo / Identificação (Opcional):
-                                </label>
-                                <div class="input-with-icon">
-                                    <span class="input-icon">👤</span>
+                        <!-- ABAS DE NAVEGAÇÃO DO FORMULÁRIO -->
+                        <div class="tabs-nav" id="cadastro-tabs-nav">
+                            <button class="tab-btn active" id="tab-btn-single" data-tab="single">
+                                <span class="tab-icon">➕</span> Cadastro Individual
+                            </button>
+                            <button class="tab-btn" id="tab-btn-bulk" data-tab="bulk">
+                                <span class="tab-icon">⚡</span> Colar Lista em Massa
+                            </button>
+                        </div>
+
+                        <!-- CONTEÚDO DA ABA 1: NÚMERO ÚNICO -->
+                        <div class="tab-content active" id="tab-content-single">
+                            <form id="form-add-admin" class="admin-form" autocomplete="off">
+                                <div class="form-group">
+                                    <label for="input-telefone" class="form-label">
+                                        Número do WhatsApp com DDD:
+                                        <span class="required">*</span>
+                                    </label>
+                                    <div class="input-with-icon">
+                                        <span class="input-icon">📱</span>
+                                        <input 
+                                            type="tel" 
+                                            id="input-telefone" 
+                                            name="telefone" 
+                                            class="form-input" 
+                                            placeholder="(11) 99999-9999 ou 5511999999999" 
+                                            required
+                                        >
+                                    </div>
+                                    <span class="input-help">O DDI 55 será adicionado automaticamente caso você digite apenas DDD + Número.</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="input-nome" class="form-label">
+                                        Nome / Cargo / Identificação (Opcional):
+                                    </label>
+                                    <div class="input-with-icon">
+                                        <span class="input-icon">👤</span>
+                                        <input 
+                                            type="text" 
+                                            id="input-nome" 
+                                            name="nome" 
+                                            class="form-input" 
+                                            placeholder="Ex: Gestor de Tráfego, Suporte VIP, Sócio"
+                                        >
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="btn-submit-single">
+                                    <span class="btn-icon">🛡️</span>
+                                    <span class="btn-text">Salvar na Whitelist</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- CONTEÚDO DA ABA 2: EM MASSA -->
+                        <div class="tab-content" id="tab-content-bulk">
+                            <form id="form-bulk-admin" class="admin-form" autocomplete="off">
+                                <div class="form-group">
+                                    <label for="textarea-bulk" class="form-label">
+                                        Cole a lista de números (um por linha ou separados por vírgula):
+                                        <span class="required">*</span>
+                                    </label>
+                                    <textarea 
+                                        id="textarea-bulk" 
+                                        name="textoBulk" 
+                                        class="form-textarea" 
+                                        rows="6" 
+                                        placeholder="5511999991111&#10;(16) 98888-2222&#10;5521977773333, 5531966664444"
+                                        required
+                                    ></textarea>
+                                    <div class="bulk-counter-bar">
+                                        <span id="bulk-detected-count">0 números detectados</span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="input-bulk-tag" class="form-label">
+                                        Nome / Identificador para este lote:
+                                    </label>
                                     <input 
                                         type="text" 
-                                        id="input-nome" 
-                                        name="nome" 
+                                        id="input-bulk-tag" 
+                                        name="nomeLote" 
                                         class="form-input" 
-                                        placeholder="Ex: Gestor de Tráfego, Suporte VIP, Sócio"
+                                        placeholder="Ex: Equipe de Lançamento Black"
                                     >
                                 </div>
+
+                                <button type="submit" class="btn btn-primary" id="btn-submit-bulk">
+                                    <span class="btn-icon">⚡</span>
+                                    <span class="btn-text">Importar Todos os Números</span>
+                                </button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <!-- CARD: LISTA DE ADMINISTRADORES -->
+                    <section class="glass-card" id="card-lista-admins">
+                        <div class="card-header list-header">
+                            <div class="card-title-group">
+                                <h2 class="card-title">
+                                    👑 Administradores Cadastrados
+                                    <span class="badge-count" id="badge-total-admins">0</span>
+                                </h2>
                             </div>
+                            <div class="header-actions">
+                                <button class="btn btn-sm btn-outline" id="btn-copy-all" title="Copiar todos os números">
+                                    📋 Copiar Todos
+                                </button>
+                            </div>
+                        </div>
 
-                            <button type="submit" class="btn btn-primary" id="btn-submit-single">
-                                <span class="btn-icon">🛡️</span>
-                                <span class="btn-text">Salvar na Whitelist</span>
-                            </button>
-                        </form>
-                    </div>
+                        <!-- BARRA DE PESQUISA -->
+                        <div class="search-bar-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input 
+                                type="text" 
+                                id="input-search-admins" 
+                                class="search-input" 
+                                placeholder="Buscar por número, nome ou DDD..."
+                            >
+                            <button class="search-clear-btn" id="btn-clear-search" style="display: none;">✕</button>
+                        </div>
 
-                    <!-- CONTEÚDO DA ABA 2: EM MASSA -->
-                    <div class="tab-content" id="tab-content-bulk">
-                        <form id="form-bulk-admin" class="admin-form" autocomplete="off">
-                            <div class="form-group">
-                                <label for="textarea-bulk" class="form-label">
-                                    Cole a lista de números (um por linha ou separados por vírgula):
-                                    <span class="required">*</span>
-                                </label>
-                                <textarea 
-                                    id="textarea-bulk" 
-                                    name="textoBulk" 
-                                    class="form-textarea" 
-                                    rows="6" 
-                                    placeholder="5511999991111&#10;(16) 98888-2222&#10;5521977773333, 5531966664444"
-                                    required
-                                ></textarea>
-                                <div class="bulk-counter-bar">
-                                    <span id="bulk-detected-count">0 números detectados</span>
+                        <!-- LISTA SCROLLÁVEL -->
+                        <div class="admins-scroll-area" id="admins-list-container">
+                            <div class="loading-state" id="loading-admins">
+                                <span class="spinner"></span>
+                                <span>Carregando administradores...</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ============================================================= -->
+                <!-- VISTA 2: ADMS DOS GRUPOS (QR CODE & CÓDIGO) -->
+                <!-- ============================================================= -->
+                <div class="module-view" id="view-espioes">
+                    <section class="glass-card" id="card-gerenciador-espioes">
+                        <div class="card-header espioes-header">
+                            <div class="card-title-group">
+                                <h2 class="card-title">🛡️ Central de ADMs dos Grupos</h2>
+                                <p class="card-subtitle">Conecte as contas de WhatsApp com permissão de Administrador nos grupos escaneando o QR Code ou via Código de Pareamento por telefone.</p>
+                            </div>
+                            <div class="header-actions">
+                                <button class="btn btn-sm btn-secondary" id="btn-force-connect-all" title="Disparar tentativa de reconexão em todas as contas de ADM">
+                                    🔄 Reconectar Todos os ADMs
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BARRA DE CONTROLE DE QUANTIDADE RÁPIDA -->
+                        <div class="espioes-control-bar">
+                            <div class="control-bar-info">
+                                <span class="control-bar-label">Quantidade de Contas de ADM no Sistema:</span>
+                                <span class="control-bar-help">Defina quantos WhatsApps com permissão de administrador vigiam e removem excedentes nos grupos.</span>
+                            </div>
+                            <div class="control-bar-action">
+                                <div class="quantity-input-group">
+                                    <button class="btn-qty-step" id="btn-qty-minus">-</button>
+                                    <input type="number" id="input-quantidade-espioes-quick" class="qty-number-input" min="1" max="20" value="4">
+                                    <button class="btn-qty-step" id="btn-qty-plus">+</button>
+                                </div>
+                                <button class="btn-sm btn-primary" id="btn-save-qty-quick">
+                                    💾 Aplicar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- GRID RESPONSIVO DE CARDS DE ADMs -->
+                        <div class="espioes-grid" id="espioes-cards-container">
+                            <!-- Cards de ADMs injetados dinamicamente via app.js -->
+                            <div class="loading-state">
+                                <span class="spinner"></span>
+                                <span>Carregando administradores...</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ============================================================= -->
+                <!-- VISTA 3: BLACKLIST (BANIDOS PERMANENTES) -->
+                <!-- ============================================================= -->
+                <div class="module-view" id="view-blacklist">
+                    <section class="glass-card" id="card-blacklist-manager">
+                        <div class="card-header list-header">
+                            <div class="card-title-group">
+                                <h2 class="card-title">
+                                    ⛔ Blacklist // Banidos Permanentes
+                                    <span class="badge-count badge-count-rose" id="badge-total-blacklist">0</span>
+                                </h2>
+                                <p class="card-subtitle">Leads banidos são removidos de <strong>TODOS os grupos sem exceção</strong> e expulsos imediatamente se tentarem voltar.</p>
+                            </div>
+                            <div class="header-actions">
+                                <button class="btn btn-sm btn-danger" id="btn-open-modal-manual-ban">
+                                    ➕ Banir Número Manualmente
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BARRA DE PESQUISA BLACKLIST -->
+                        <div class="search-bar-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input 
+                                type="text" 
+                                id="input-search-blacklist" 
+                                class="search-input" 
+                                placeholder="Buscar por número ou motivo de banimento..."
+                            >
+                            <button class="search-clear-btn" id="btn-clear-search-blacklist" style="display: none;">✕</button>
+                        </div>
+
+                        <!-- LISTA SCROLLÁVEL DE BANIDOS -->
+                        <div class="blacklist-scroll-area" id="blacklist-items-container">
+                            <div class="loading-state" id="loading-blacklist">
+                                <span class="spinner"></span>
+                                <span>Carregando lista de banidos...</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ============================================================= -->
+                <!-- VISTA 4: CONFIGURAÇÕES & LIMITES -->
+                <!-- ============================================================= -->
+                <div class="module-view" id="view-config">
+                    <section class="glass-card" id="card-config-settings">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <h2 class="card-title">⚙️ Regras do Sistema & Limites Operacionais</h2>
+                                <p class="card-subtitle">Personalize a tolerância de grupos por lead e a regra de ban permanente.</p>
+                            </div>
+                        </div>
+
+                        <form id="form-system-config" class="config-settings-form">
+                            <!-- CAMPO 1: LIMITE NORMAL DE SATURAÇÃO -->
+                            <div class="config-field-card">
+                                <div class="config-field-header">
+                                    <div class="config-field-icon bg-amber-soft">⚖️</div>
+                                    <div class="config-field-info">
+                                        <label for="cfg-limite-grupos" class="config-label">
+                                            Limite de Grupos Permitidos por Campanha (Saturação)
+                                        </label>
+                                        <p class="config-desc">
+                                            Quantidade máxima de grupos que uma pessoa comum pode participar na mesma campanha. Se ultrapassar este número, ela terá os grupos excedentes removidos (mantém 1 grupo mais antigo).
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="config-field-input-wrap">
+                                    <input 
+                                        type="number" 
+                                        id="cfg-limite-grupos" 
+                                        name="limiteGruposPorCampanha" 
+                                        class="form-input config-num-input" 
+                                        min="1" 
+                                        max="50" 
+                                        value="4" 
+                                        required
+                                    >
+                                    <span class="config-unit">grupos</span>
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="input-bulk-tag" class="form-label">
-                                    Nome / Identificador para este lote:
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="input-bulk-tag" 
-                                    name="nomeLote" 
-                                    class="form-input" 
-                                    placeholder="Ex: Equipe de Lançamento Black"
-                                >
+                            <!-- CAMPO 2: LIMITE DE LINKS PARA BAN PERMANENTE -->
+                            <div class="config-field-card config-field-alert">
+                                <div class="config-field-header">
+                                    <div class="config-field-icon bg-rose-soft">💀</div>
+                                    <div class="config-field-info">
+                                        <label for="cfg-limite-ban" class="config-label text-rose">
+                                            Gatilho para Ban Permanente (Links / Grupos no Total)
+                                        </label>
+                                        <p class="config-desc">
+                                            Se a pessoa for detectada em mais de <strong>X links</strong> no total, ela sofrerá <strong>BAN PERMANENTE</strong>: é removida de <strong>TODOS OS GRUPOS SEM EXCEÇÃO</strong> e toda vez que tentar entrar em algum grupo será expulsa na hora.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="config-field-input-wrap">
+                                    <input 
+                                        type="number" 
+                                        id="cfg-limite-ban" 
+                                        name="limiteBanPermanente" 
+                                        class="form-input config-num-input input-rose" 
+                                        min="2" 
+                                        max="100" 
+                                        value="10" 
+                                        required
+                                    >
+                                    <span class="config-unit text-rose">links</span>
+                                </div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary" id="btn-submit-bulk">
-                                <span class="btn-icon">⚡</span>
-                                <span class="btn-text">Importar Todos os Números</span>
-                            </button>
-                        </form>
-                    </div>
-                </section>
+                            <!-- CAMPO 3: QUANTIDADE DE ADMs DOS GRUPOS -->
+                            <div class="config-field-card">
+                                <div class="config-field-header">
+                                    <div class="config-field-icon bg-cyan-soft">🛡️</div>
+                                    <div class="config-field-info">
+                                        <label for="cfg-qtd-espioes" class="config-label">
+                                            Quantidade de Contas de ADM dos Grupos
+                                        </label>
+                                        <p class="config-desc">
+                                            Quantos números de WhatsApp você deseja alocar como administradores para monitorar os grupos e aplicar as expulsões automáticas.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="config-field-input-wrap">
+                                    <input 
+                                        type="number" 
+                                        id="cfg-qtd-espioes" 
+                                        name="quantidadeEspioes" 
+                                        class="form-input config-num-input" 
+                                        min="1" 
+                                        max="20" 
+                                        value="4" 
+                                        required
+                                    >
+                                    <span class="config-unit">ADMs</span>
+                                </div>
+                            </div>
 
-                <!-- CARD DE FERRAMENTAS / BACKUP PARA EASYPANEL -->
-                <section class="glass-card tools-card" id="card-easypanel-tools">
-                    <div class="card-header">
-                        <div class="card-title-group">
-                            <h3 class="card-title-sm">📦 Migração & Backup de Sessões</h3>
-                            <p class="card-subtitle-sm">Exporte ou restaure suas credenciais do WhatsApp diretamente pelo navegador.</p>
-                        </div>
-                    </div>
-                    
-                    <div class="tools-btn-grid">
-                        <a href="/api/backup/sessoes" class="btn btn-secondary" id="btn-backup-sessoes" download title="Baixar todas as credenciais do WhatsApp em um arquivo ZIP">
-                            <span class="btn-icon">📥</span> Baixar Sessões (ZIP)
-                        </a>
-                        <label class="btn btn-secondary" id="label-upload-sessoes" style="cursor: pointer; margin: 0;" title="Enviar o arquivo ZIP de sessões para o servidor">
-                            <span class="btn-icon">📤</span> Restaurar Sessões (ZIP)
-                            <input type="file" id="input-upload-sessoes" accept=".zip" style="display: none;">
-                        </label>
-                        <a href="/api/backup/whitelist" class="btn btn-secondary" id="btn-backup-whitelist" download title="Baixar arquivo whitelist_aegis.json">
-                            <span class="btn-icon">📄</span> Baixar Whitelist
-                        </a>
-                        <button class="btn btn-secondary" id="btn-reconectar-snipers" type="button" title="Disparar conexão dos 4 Snipers agora">
-                            <span class="btn-icon">🔄</span> Conectar Snipers
-                        </button>
-                    </div>
-                </section>
+                            <div class="config-form-actions">
+                                <button type="submit" class="btn btn-primary btn-lg" id="btn-save-config">
+                                    <span class="btn-icon">💾</span>
+                                    <span class="btn-text">Salvar Alterações de Configuração</span>
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+
             </div>
 
-            <!-- COLUNA DIREITA: LISTAGEM DE ADMINS E FEED DA CATRACA -->
+            <!-- COLUNA DIREITA: RADAR DA CATRACA EM TEMPO REAL & FERRAMENTAS -->
             <div class="content-column right-column">
                 
-                <!-- CARD: LISTA DE ADMINISTRADORES -->
-                <section class="glass-card" id="card-lista-admins">
-                    <div class="card-header list-header">
-                        <div class="card-title-group">
-                            <h2 class="card-title">
-                                👑 Administradores Cadastrados
-                                <span class="badge-count" id="badge-total-admins">0</span>
-                            </h2>
-                        </div>
-                        <div class="header-actions">
-                            <button class="btn btn-sm btn-outline" id="btn-copy-all" title="Copiar todos os números">
-                                📋 Copiar Todos
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- BARRA DE PESQUISA -->
-                    <div class="search-bar-wrap">
-                        <span class="search-icon">🔍</span>
-                        <input 
-                            type="text" 
-                            id="input-search-admins" 
-                            class="search-input" 
-                            placeholder="Buscar por número, nome ou DDD..."
-                        >
-                        <button class="search-clear-btn" id="btn-clear-search" style="display: none;">✕</button>
-                    </div>
-
-                    <!-- LISTA SCROLLÁVEL -->
-                    <div class="admins-scroll-area" id="admins-list-container">
-                        <div class="loading-state" id="loading-admins">
-                            <span class="spinner"></span>
-                            <span>Carregando administradores...</span>
-                        </div>
-                    </div>
-                </section>
-
                 <!-- CARD: RADAR EM TEMPO REAL DA CATRACA -->
                 <section class="glass-card" id="card-catraca-feed">
                     <div class="card-header feed-header">
@@ -289,7 +496,7 @@
                             <h3 class="card-title-sm">
                                 🚨 Radar da Catraca em Tempo Real
                             </h3>
-                            <p class="card-subtitle-sm">Acompanhe entradas de leads, checagens de whitelist e expulsões 24/7</p>
+                            <p class="card-subtitle-sm">Acompanhe entradas de leads, checagens, expulsões e bans 24/7</p>
                         </div>
                         <div class="feed-controls">
                             <button class="btn-icon-sm" id="btn-toggle-feed-auto" title="Pausar / Retomar Feed">
@@ -303,6 +510,32 @@
                     </div>
                 </section>
 
+                <!-- CARD DE FERRAMENTAS / BACKUP & EASYPANEL -->
+                <section class="glass-card tools-card" id="card-easypanel-tools">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <h3 class="card-title-sm">📦 Migração & Backup de Sessões</h3>
+                            <p class="card-subtitle-sm">Exporte ou restaure suas credenciais do WhatsApp e dados diretamente pelo navegador.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tools-btn-grid">
+                        <a href="/api/backup/sessoes" class="btn btn-secondary" id="btn-backup-sessoes" download title="Baixar todas as credenciais do WhatsApp e dados em um arquivo ZIP">
+                            <span class="btn-icon">📥</span> Baixar Tudo (ZIP)
+                        </a>
+                        <label class="btn btn-secondary" id="label-upload-sessoes" style="cursor: pointer; margin: 0;" title="Enviar o arquivo ZIP de sessões para o servidor">
+                            <span class="btn-icon">📤</span> Restaurar ZIP
+                            <input type="file" id="input-upload-sessoes" accept=".zip" style="display: none;">
+                        </label>
+                        <a href="/api/backup/whitelist" class="btn btn-secondary" id="btn-backup-whitelist" download title="Baixar arquivo whitelist_aegis.json">
+                            <span class="btn-icon">📄</span> Whitelist (JSON)
+                        </a>
+                        <a href="/api/backup/blacklist" class="btn btn-secondary" id="btn-backup-blacklist" download title="Baixar arquivo blacklist_aegis.json">
+                            <span class="btn-icon">⛔</span> Blacklist (JSON)
+                        </a>
+                    </div>
+                </section>
+
             </div>
         </main>
 
@@ -312,7 +545,149 @@
         </footer>
     </div>
 
-    <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+    <!-- ============================================================= -->
+    <!-- MODAIS DO SISTEMA -->
+    <!-- ============================================================= -->
+
+    <!-- MODAL 1: CONECTAR VIA QR CODE -->
+    <div class="modal-overlay" id="modal-qr" style="display: none;">
+        <div class="modal-box modal-qr-box">
+            <div class="modal-header-row">
+                <div class="modal-title-with-badge">
+                    <h3 class="modal-title" id="modal-qr-title">Conectar ADM #01</h3>
+                    <span class="modal-badge-status" id="modal-qr-status-pill">Gerando QR...</span>
+                </div>
+                <button class="modal-close-x" id="modal-qr-close">✕</button>
+            </div>
+
+            <div class="qr-display-container">
+                <div class="qr-image-wrapper" id="modal-qr-img-wrap">
+                    <span class="spinner spinner-lg"></span>
+                    <span class="qr-loading-text">Conectando aos servidores do WhatsApp...</span>
+                </div>
+                <div class="qr-instructions">
+                    <div class="qr-step"><span class="step-num">1</span> Abra o <strong>WhatsApp</strong> no celular que é Administrador dos grupos</div>
+                    <div class="qr-step"><span class="step-num">2</span> Toque em <strong>Configurações</strong> &gt; <strong>Aparelhos Conectados</strong></div>
+                    <div class="qr-step"><span class="step-num">3</span> Toque em <strong>Conectar um Aparelho</strong> e aponte para a tela</div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-qr-btn-cancel">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: CONECTAR VIA CÓDIGO DE PAREAMENTO -->
+    <div class="modal-overlay" id="modal-code" style="display: none;">
+        <div class="modal-box modal-code-box">
+            <div class="modal-header-row">
+                <h3 class="modal-title" id="modal-code-title">Conectar ADM via Código</h3>
+                <button class="modal-close-x" id="modal-code-close">✕</button>
+            </div>
+
+            <!-- ETAPA 1: DIGITAR TELEFONE -->
+            <div class="code-step-section" id="code-step-input">
+                <p class="modal-message">
+                    Digite o número de telefone com DDD do chip que é Administrador nos grupos:
+                </p>
+                <div class="form-group">
+                    <label for="input-code-phone" class="form-label">Número do Chip ADM (WhatsApp):</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">📱</span>
+                        <input 
+                            type="tel" 
+                            id="input-code-phone" 
+                            class="form-input" 
+                            placeholder="(11) 99999-9999 ou 5511999999999" 
+                            required
+                        >
+                    </div>
+                    <span class="input-help">O DDI 55 é aplicado automaticamente se omitido.</span>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modal-code-btn-cancel">Cancelar</button>
+                    <button class="btn btn-primary" id="modal-code-btn-generate">
+                        <span class="btn-icon">🔑</span> Gerar Código de Pareamento
+                    </button>
+                </div>
+            </div>
+
+            <!-- ETAPA 2: EXIBIR CÓDIGO GERADO -->
+            <div class="code-step-section" id="code-step-display" style="display: none;">
+                <div class="pairing-code-card">
+                    <span class="pairing-code-label">SEU CÓDIGO DE CONEXÃO:</span>
+                    <div class="pairing-code-display" id="pairing-code-text">---- ----</div>
+                    <button class="btn btn-sm btn-outline" id="btn-copy-pairing-code">
+                        📋 Copiar Código
+                    </button>
+                </div>
+
+                <div class="qr-instructions" style="margin-top: 18px;">
+                    <div class="qr-step"><span class="step-num">1</span> Abra o <strong>WhatsApp</strong> no aparelho do ADM</div>
+                    <div class="qr-step"><span class="step-num">2</span> Vá em <strong>Aparelhos Conectados</strong> &gt; <strong>Conectar com número de telefone</strong></div>
+                    <div class="qr-step"><span class="step-num">3</span> Digite o código de 8 dígitos exibido acima</div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modal-code-display-close">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: BANIR NÚMERO MANUALMENTE -->
+    <div class="modal-overlay" id="modal-manual-ban" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-header-row">
+                <h3 class="modal-title text-rose">⛔ Banir Número Permanentemente</h3>
+                <button class="modal-close-x" id="modal-ban-close">✕</button>
+            </div>
+            <p class="modal-message">
+                O número será adicionado à Blacklist, <strong>removido de TODOS os grupos imediatamente sem exceção</strong> e expulso se tentar entrar novamente.
+            </p>
+            <div class="form-group">
+                <label for="input-ban-phone" class="form-label">Número com DDD:</label>
+                <input 
+                    type="tel" 
+                    id="input-ban-phone" 
+                    class="form-input input-rose" 
+                    placeholder="(11) 99999-9999 ou 5511999999999" 
+                    required
+                >
+            </div>
+            <div class="form-group">
+                <label for="input-ban-reason" class="form-label">Motivo do Banimento (Opcional):</label>
+                <input 
+                    type="text" 
+                    id="input-ban-reason" 
+                    class="form-input" 
+                    placeholder="Ex: Excedeu 10 links, Invasor suspeito, Clonador"
+                >
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-ban-cancel">Cancelar</button>
+                <button class="btn btn-danger" id="modal-ban-confirm">Sim, Banir Permanentemente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: CONFIRMAÇÃO DE DESCONEXÃO DE ADM -->
+    <div class="modal-overlay" id="modal-confirm-disconnect" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-icon">⚠️</div>
+            <h3 class="modal-title">Desconectar Conta de ADM?</h3>
+            <p class="modal-message" id="modal-disconnect-message">
+                Tem certeza que deseja desconectar esta conta de Administrador? As credenciais salvas serão apagadas e ela deixará de monitorar os grupos até ser reconectada.
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-disconnect-cancel">Cancelar</button>
+                <button class="btn btn-danger" id="modal-disconnect-confirm">Sim, Desconectar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: CONFIRMAÇÃO DE EXCLUSÃO DE ADMIN WHITELIST -->
     <div class="modal-overlay" id="modal-delete-admin" style="display: none;">
         <div class="modal-box">
             <div class="modal-icon">⚠️</div>
@@ -323,6 +698,21 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="modal-btn-cancel">Cancelar</button>
                 <button class="btn btn-danger" id="modal-btn-confirm-delete">Sim, Remover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6: CONFIRMAÇÃO DE DESBANIR BLACKLIST -->
+    <div class="modal-overlay" id="modal-unban-confirm" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-icon">🔓</div>
+            <h3 class="modal-title">Desbanir Número?</h3>
+            <p class="modal-message" id="modal-unban-message">
+                Tem certeza que deseja desbanir este número da Blacklist?
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-unban-cancel">Cancelar</button>
+                <button class="btn btn-primary" id="modal-unban-confirm-btn">Sim, Desbanir</button>
             </div>
         </div>
     </div>
