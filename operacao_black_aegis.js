@@ -518,31 +518,38 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
         fs.mkdirSync(pastaAuth, { recursive: true });
     }
 
-    // Fecha socket existente no mesmo slot se houver
-    const sExistente = snipersAtivos.find(x => x.indice === indice);
-    if (sExistente && sExistente.sock) {
+    // Fecha socket existente no mesmo slot se houver e remove de snipersAtivos
+    const idxExistente = snipersAtivos.findIndex(x => x.indice === indice);
+    if (idxExistente !== -1) {
+        const sExistente = snipersAtivos[idxExistente];
         try {
             sExistente.sock.ev.removeAllListeners();
             if (sExistente.sock.ws) sExistente.sock.ws.close();
         } catch (e) { }
+        snipersAtivos.splice(idxExistente, 1);
     }
 
-    let estado = estadoAdms.get(indice) || {
+    // Como o usuário está solicitando uma NOVA conexão manual (QR ou Código) para este slot,
+    // limpamos as credenciais antigas para garantir que o Baileys gere um código/QR totalmente novo.
+    if (fs.existsSync(pastaAuth)) {
+        try {
+            fs.rmSync(pastaAuth, { recursive: true, force: true });
+        } catch (e) {
+            console.error(`[!] Erro ao limpar auth_sniper_${indice}:`, e.message);
+        }
+    }
+    fs.mkdirSync(pastaAuth, { recursive: true });
+
+    let estado = {
         indice,
         conectado: false,
-        status: 'iniciando',
+        status: tipoConexao === 'codigo' ? 'solicitando_codigo' : 'gerando_qr',
         numero: null,
         qrCodeDataUrl: null,
         pairingCode: null,
         erroMsg: null,
         atualizadoEm: Date.now()
     };
-
-    estado.status = tipoConexao === 'codigo' ? 'solicitando_codigo' : 'gerando_qr';
-    estado.qrCodeDataUrl = null;
-    estado.pairingCode = null;
-    estado.erroMsg = null;
-    estado.atualizadoEm = Date.now();
     estadoAdms.set(indice, estado);
 
     const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
@@ -559,10 +566,27 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
 
     sock.ev.on('creds.update', saveCreds);
 
-    let pairingSolicitado = false;
-
-    if (state.creds.registered) {
-        estado.status = 'conectando';
+    // Se for código de pareamento, solicita o código de 8 dígitos após 2 segundos
+    if (tipoConexao === 'codigo') {
+        setTimeout(async () => {
+            try {
+                const numLimpo = extrairNumeroLimpo(numeroTelefone);
+                if (!numLimpo) throw new Error('Número de telefone não informado.');
+                console.log(`[🔢 ADM 0${indice}] Solicitando código de pareamento para ${numLimpo}...`);
+                const rawCode = await sock.requestPairingCode(numLimpo);
+                const formatado = rawCode ? (rawCode.length === 8 ? `${rawCode.substring(0, 4)}-${rawCode.substring(4)}` : rawCode) : 'ERRO';
+                estado.pairingCode = formatado;
+                estado.status = 'codigo_pronto';
+                estado.atualizadoEm = Date.now();
+                console.log(`[🔑 ADM 0${indice}] Código de Pareamento Gerado: ${formatado}`);
+                adicionarEventoFeed('ADM', `🔑 ADM 0${indice}: Código gerado (${formatado}) para o número ${formatarExibicao(numLimpo)}`);
+            } catch (err) {
+                console.error(`[!] Falha no Pairing Code ADM 0${indice}:`, err.message);
+                estado.erroMsg = 'Falha ao solicitar código: ' + (err.message || err);
+                estado.status = 'erro';
+                estado.atualizadoEm = Date.now();
+            }
+        }, 2000);
     }
 
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
@@ -579,30 +603,6 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
                 estado.erroMsg = 'Falha ao gerar imagem do QR Code: ' + err.message;
                 estado.status = 'erro';
             }
-        }
-
-        // 2. PAIRING CODE
-        if (tipoConexao === 'codigo' && !sock.authState.creds.registered && !pairingSolicitado) {
-            pairingSolicitado = true;
-            setTimeout(async () => {
-                try {
-                    const numLimpo = extrairNumeroLimpo(numeroTelefone);
-                    if (!numLimpo) throw new Error('Número de telefone não informado.');
-                    console.log(`[🔢 ADM 0${indice}] Solicitando código de pareamento para ${numLimpo}...`);
-                    const rawCode = await sock.requestPairingCode(numLimpo);
-                    const formatado = rawCode ? (rawCode.length === 8 ? `${rawCode.substring(0, 4)}-${rawCode.substring(4)}` : rawCode) : 'ERRO';
-                    estado.pairingCode = formatado;
-                    estado.status = 'codigo_pronto';
-                    estado.atualizadoEm = Date.now();
-                    console.log(`[🔑 ADM 0${indice}] Código de Pareamento: ${formatado}`);
-                    adicionarEventoFeed('ADM', `🔑 ADM 0${indice}: Código gerado (${formatado}) para o número ${formatarExibicao(numLimpo)}`);
-                } catch (err) {
-                    console.error(`[!] Falha no Pairing Code ADM 0${indice}:`, err.message);
-                    estado.erroMsg = 'Falha ao solicitar código: ' + (err.message || err);
-                    estado.status = 'erro';
-                    estado.atualizadoEm = Date.now();
-                }
-            }, 2000);
         }
 
         // 3. CONECTADO

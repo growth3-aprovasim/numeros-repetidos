@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Dispara geração no backend
         try {
-            await fetch(`/api/espioes/${indice}/conectar-qr`, { method: 'POST' });
+            await fetch(`/api/adms/${indice}/conectar-qr`, { method: 'POST' });
         } catch (e) {
             console.error('[!] Erro ao disparar QR:', e);
         }
@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalCodeBtnGenerate.innerHTML = '<span class="spinner"></span> Solicitando código...';
 
         try {
-            const res = await fetch(`/api/espioes/${indiceEspiaoParaAcao}/conectar-codigo`, {
+            const res = await fetch(`/api/adms/${indiceEspiaoParaAcao}/conectar-codigo`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ telefone: tel })
@@ -757,18 +757,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function atualizarEstadoModalCodigo(esp) {
         if (!modalCodigoAtivo || esp.indice !== indiceEspiaoParaAcao) return;
 
-        if (esp.conectado) {
+        // 1. Se gerou o código de 8 dígitos, exibe com destaque na tela
+        if (esp.pairingCode) {
+            pairingCodeText.textContent = esp.pairingCode;
+            pairingCodeText.style.color = '#06b6d4';
+        }
+
+        // 2. Só fecha e dá mensagem de sucesso após o celular de fato parear
+        if (esp.conectado && esp.status === 'conectado') {
             pairingCodeText.textContent = 'CONECTADO!';
             pairingCodeText.style.color = '#10b981';
             showToast(`ADM 0${esp.indice} conectado com sucesso!`);
-            setTimeout(() => fecharModalCodigo(), 2000);
+            setTimeout(() => fecharModalCodigo(), 2500);
             return;
         }
 
-        if (esp.pairingCode) {
-            pairingCodeText.textContent = esp.pairingCode;
-        } else if (esp.erroMsg) {
+        if (esp.erroMsg) {
             pairingCodeText.textContent = 'ERRO';
+            pairingCodeText.style.color = '#ef4444';
             showToast(esp.erroMsg, 'error');
         }
     }
@@ -811,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalDisconnectConfirm.textContent = 'Desconectando...';
 
         try {
-            const res = await fetch(`/api/espioes/${indiceEspiaoParaAcao}/desconectar`, { method: 'POST' });
+            const res = await fetch(`/api/adms/${indiceEspiaoParaAcao}/desconectar`, { method: 'POST' });
             const data = await res.json();
             if (data.sucesso) {
                 showToast(data.mensagem);
