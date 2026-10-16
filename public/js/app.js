@@ -497,10 +497,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarEspioes() {
         try {
-            const res = await fetch('/api/espioes');
+            const res = await fetch('/api/adms');
             const data = await res.json();
             if (data.sucesso) {
-                listaEspioesCache = data.espioes || [];
+                listaEspioesCache = data.adms || data.espioes || [];
                 renderizarCardsEspioes(listaEspioesCache);
                 atualizarMetricasEspioes(data.conectados, data.total, listaEspioesCache);
 
@@ -513,9 +513,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     const espAtivo = listaEspioesCache.find(x => x.indice === indiceEspiaoParaAcao);
                     if (espAtivo) atualizarEstadoModalCodigo(espAtivo);
                 }
+            } else {
+                espioesCardsContainer.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <span class="empty-icon">⚠️</span>
+                        <p class="empty-title">Erro ao carregar lista de ADMs</p>
+                        <p class="empty-subtitle">${escapeHtml(data.erro || 'Falha na resposta do servidor.')}</p>
+                    </div>
+                `;
             }
         } catch (err) {
             console.error('[!] Erro ao carregar ADMs:', err);
+            espioesCardsContainer.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <span class="empty-icon">⚠️</span>
+                    <p class="empty-title">Servidor não respondeu</p>
+                    <p class="empty-subtitle">Verifique se o backend está em execução na porta 3000.</p>
+                </div>
+            `;
         }
     }
 

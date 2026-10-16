@@ -19,6 +19,9 @@ const {
     estaNaBlacklist,
     banirPermanente,
     desbanir,
+    obterStatusAdms,
+    conectarAdmManual,
+    desconectarAdm,
     obterStatusEspioes,
     conectarEspiaoManual,
     desconectarEspiao
