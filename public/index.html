@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS C2 // Painel de Controle e Whitelist</title>
+    <meta name="description" content="Painel de Controle Central do Motor Aegis Anti-Hacker para WhatsApp - Gestão de Administradores, Whitelist e Catraca 24/7">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS Principal -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <!-- Favicon SVG -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><path d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z'/></svg>">
+</head>
+<body>
+    <div class="background-mesh"></div>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div class="app-container">
+        <!-- HEADER PRINCIPAL -->
+        <header class="app-header" id="app-header">
+            <div class="header-left">
+                <div class="shield-badge">
+                    <svg class="shield-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.67-3.13 9.01-7 10.15-3.87-1.14-7-5.48-7-10.15V6.3l7-3.12zm-1 5.82v6h2v-6h-2zm0 8v2h2v-2h-2z"/>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <div class="brand-title-wrap">
+                        <h1 class="brand-title">AEGIS // C2 SENTINEL</h1>
+                        <span class="version-tag">v7.8 PROD</span>
+                    </div>
+                    <p class="brand-subtitle">Operação Black Vitalícia & Desafio Base Forte (56 Grupos Protegidos)</p>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="live-pill" id="live-status-pill">
+                    <span class="pulsing-dot"></span>
+                    <span class="live-text" id="server-status-text">SISTEMA ATIVO</span>
+                </div>
+                <button class="btn-refresh" id="btn-refresh-all" title="Atualizar dados agora">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- CARDS DE MÉTRICAS / TELEMETRIA -->
+        <section class="metrics-grid" id="metrics-grid">
+            <div class="metric-card card-emerald" id="card-metric-admins">
+                <div class="metric-header">
+                    <span class="metric-label">ADMINISTRADORES NA WHITELIST</span>
+                    <span class="metric-icon-badge">👑</span>
+                </div>
+                <div class="metric-value" id="val-total-admins">--</div>
+                <div class="metric-footer">
+                    <span class="sub-text">100% Imunes à Catraca nos 56 Grupos</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-cyan" id="card-metric-snipers">
+                <div class="metric-header">
+                    <span class="metric-label">FROTA DE SNIPERS</span>
+                    <span class="metric-icon-badge">🎯</span>
+                </div>
+                <div class="metric-value" id="val-snipers-status">-- / 4</div>
+                <div class="metric-footer" id="snipers-indicators-row">
+                    <span class="sniper-dot" id="dot-sniper-1" title="Sniper 01">01</span>
+                    <span class="sniper-dot" id="dot-sniper-2" title="Sniper 02">02</span>
+                    <span class="sniper-dot" id="dot-sniper-3" title="Sniper 03">03</span>
+                    <span class="sniper-dot" id="dot-sniper-4" title="Sniper 04">04</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-amber" id="card-metric-policy">
+                <div class="metric-header">
+                    <span class="metric-label">REGRA DE SATURAÇÃO</span>
+                    <span class="metric-icon-badge">⚖️</span>
+                </div>
+                <div class="metric-value">MÁX. 4</div>
+                <div class="metric-footer">
+                    <span class="sub-text">5+ grupos na mesma campanha = Expulsão imediata</span>
+                </div>
+            </div>
+
+            <div class="metric-card card-violet" id="card-metric-uptime">
+                <div class="metric-header">
+                    <span class="metric-label">TEMPO ONLINE</span>
+                    <span class="metric-icon-badge">⏱️</span>
+                </div>
+                <div class="metric-value" id="val-uptime">0s</div>
+                <div class="metric-footer">
+                    <span class="sub-text" id="val-memory">RAM: -- MB</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- LAYOUT DE DUAS COLUNAS PRINCIPAIS -->
+        <main class="main-content-grid">
+            <!-- COLUNA ESQUERDA: FORMULÁRIO DE CADASTRO -->
+            <div class="content-column left-column">
+                
+                <!-- CARD DE CADASTRO -->
+                <section class="glass-card" id="card-cadastro-whitelist">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <h2 class="card-title">🛡️ Cadastrar Administrador (Whitelist)</h2>
+                            <p class="card-subtitle">Números cadastrados aqui nunca serão expulsos da Black Vitalícia nem da Base Forte.</p>
+                        </div>
+                    </div>
+
+                    <!-- ABAS DE NAVEGAÇÃO DO FORMULÁRIO -->
+                    <div class="tabs-nav" id="cadastro-tabs-nav">
+                        <button class="tab-btn active" id="tab-btn-single" data-tab="single">
+                            <span class="tab-icon">➕</span> Cadastro Individual
+                        </button>
+                        <button class="tab-btn" id="tab-btn-bulk" data-tab="bulk">
+                            <span class="tab-icon">⚡</span> Colar Lista em Massa
+                        </button>
+                    </div>
+
+                    <!-- CONTEÚDO DA ABA 1: NÚMERO ÚNICO -->
+                    <div class="tab-content active" id="tab-content-single">
+                        <form id="form-add-admin" class="admin-form" autocomplete="off">
+                            <div class="form-group">
+                                <label for="input-telefone" class="form-label">
+                                    Número do WhatsApp com DDD:
+                                    <span class="required">*</span>
+                                </label>
+                                <div class="input-with-icon">
+                                    <span class="input-icon">📱</span>
+                                    <input 
+                                        type="tel" 
+                                        id="input-telefone" 
+                                        name="telefone" 
+                                        class="form-input" 
+                                        placeholder="(11) 99999-9999 ou 5511999999999" 
+                                        required
+                                        autofocus
+                                    >
+                                </div>
+                                <span class="input-help">O DDI 55 será adicionado automaticamente caso você digite apenas DDD + Número.</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="input-nome" class="form-label">
+                                    Nome / Cargo / Identificação (Opcional):
+                                </label>
+                                <div class="input-with-icon">
+                                    <span class="input-icon">👤</span>
+                                    <input 
+                                        type="text" 
+                                        id="input-nome" 
+                                        name="nome" 
+                                        class="form-input" 
+                                        placeholder="Ex: Gestor de Tráfego, Suporte VIP, Sócio"
+                                    >
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btn-submit-single">
+                                <span class="btn-icon">🛡️</span>
+                                <span class="btn-text">Salvar na Whitelist</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- CONTEÚDO DA ABA 2: EM MASSA -->
+                    <div class="tab-content" id="tab-content-bulk">
+                        <form id="form-bulk-admin" class="admin-form" autocomplete="off">
+                            <div class="form-group">
+                                <label for="textarea-bulk" class="form-label">
+                                    Cole a lista de números (um por linha ou separados por vírgula):
+                                    <span class="required">*</span>
+                                </label>
+                                <textarea 
+                                    id="textarea-bulk" 
+                                    name="textoBulk" 
+                                    class="form-textarea" 
+                                    rows="6" 
+                                    placeholder="5511999991111&#10;(16) 98888-2222&#10;5521977773333, 5531966664444"
+                                    required
+                                ></textarea>
+                                <div class="bulk-counter-bar">
+                                    <span id="bulk-detected-count">0 números detectados</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="input-bulk-tag" class="form-label">
+                                    Nome / Identificador para este lote:
+                                </label>
+                                <input 
+                                    type="text" 
+                                    id="input-bulk-tag" 
+                                    name="nomeLote" 
+                                    class="form-input" 
+                                    placeholder="Ex: Equipe de Lançamento Black"
+                                >
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btn-submit-bulk">
+                                <span class="btn-icon">⚡</span>
+                                <span class="btn-text">Importar Todos os Números</span>
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- CARD DE FERRAMENTAS / BACKUP PARA EASYPANEL -->
+                <section class="glass-card tools-card" id="card-easypanel-tools">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <h3 class="card-title-sm">📦 Migração & Backup de Sessões</h3>
+                            <p class="card-subtitle-sm">Exporte ou restaure suas credenciais do WhatsApp diretamente pelo navegador.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="tools-btn-grid">
+                        <a href="/api/backup/sessoes" class="btn btn-secondary" id="btn-backup-sessoes" download>
+                            <span class="btn-icon">📥</span> Baixar Sessões (ZIP)
+                        </a>
+                        <a href="/api/backup/whitelist" class="btn btn-secondary" id="btn-backup-whitelist" download>
+                            <span class="btn-icon">📄</span> Baixar Whitelist (JSON)
+                        </a>
+                    </div>
+                </section>
+            </div>
+
+            <!-- COLUNA DIREITA: LISTAGEM DE ADMINS E FEED DA CATRACA -->
+            <div class="content-column right-column">
+                
+                <!-- CARD: LISTA DE ADMINISTRADORES -->
+                <section class="glass-card" id="card-lista-admins">
+                    <div class="card-header list-header">
+                        <div class="card-title-group">
+                            <h2 class="card-title">
+                                👑 Administradores Cadastrados
+                                <span class="badge-count" id="badge-total-admins">0</span>
+                            </h2>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-sm btn-outline" id="btn-copy-all" title="Copiar todos os números">
+                                📋 Copiar Todos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BARRA DE PESQUISA -->
+                    <div class="search-bar-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input 
+                            type="text" 
+                            id="input-search-admins" 
+                            class="search-input" 
+                            placeholder="Buscar por número, nome ou DDD..."
+                        >
+                        <button class="search-clear-btn" id="btn-clear-search" style="display: none;">✕</button>
+                    </div>
+
+                    <!-- LISTA SCROLLÁVEL -->
+                    <div class="admins-scroll-area" id="admins-list-container">
+                        <div class="loading-state" id="loading-admins">
+                            <span class="spinner"></span>
+                            <span>Carregando administradores...</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CARD: RADAR EM TEMPO REAL DA CATRACA -->
+                <section class="glass-card" id="card-catraca-feed">
+                    <div class="card-header feed-header">
+                        <div class="card-title-group">
+                            <h3 class="card-title-sm">
+                                🚨 Radar da Catraca em Tempo Real
+                            </h3>
+                            <p class="card-subtitle-sm">Acompanhe entradas de leads, checagens de whitelist e expulsões 24/7</p>
+                        </div>
+                        <div class="feed-controls">
+                            <button class="btn-icon-sm" id="btn-toggle-feed-auto" title="Pausar / Retomar Feed">
+                                🟢 Ativo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="feed-terminal" id="terminal-feed-list">
+                        <div class="feed-empty-state">Aguardando novos eventos de entrada nos grupos...</div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <p>Aegis Shield C2 &bull; Sistema Autônomo Anti-Hacker &bull; Otimizado para Easypanel & Docker</p>
+        </footer>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO DE EXCLUSÃO -->
+    <div class="modal-overlay" id="modal-delete-admin" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-icon">⚠️</div>
+            <h3 class="modal-title">Remover Administrador?</h3>
+            <p class="modal-message" id="modal-delete-message">
+                Tem certeza que deseja remover este administrador da Whitelist?
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-btn-cancel">Cancelar</button>
+                <button class="btn btn-danger" id="modal-btn-confirm-delete">Sim, Remover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- JAVASCRIPT -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

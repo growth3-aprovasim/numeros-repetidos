@@ -1,0 +1,1608 @@
+{
+  "dataGeracao": "2026-10-14T19:14:22.666Z",
+  "fase1_black": {
+    "nomeCampanha": "Black Vitalícia (28 Grupos Oficiais Consolidados)",
+    "totalGruposCampanha": 28,
+    "totalAlvos": 60,
+    "totalKicks": 279,
+    "alvos": [
+      {
+        "numero": "554892217610",
+        "totalGrupos": 9,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363430955711389@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          }
+        ]
+      },
+      {
+        "numero": "558699037146",
+        "totalGrupos": 9,
+        "grupoManter": "Desconto Black Vitalícia #1",
+        "idGrupoManter": "120363430454269959@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "558496617729",
+        "totalGrupos": 8,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "5522998243090",
+        "totalGrupos": 8,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "5521965382943",
+        "totalGrupos": 8,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          }
+        ]
+      },
+      {
+        "numero": "5511926793120",
+        "totalGrupos": 7,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "556793043677",
+        "totalGrupos": 7,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "556791345388",
+        "totalGrupos": 7,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          }
+        ]
+      },
+      {
+        "numero": "559887092570",
+        "totalGrupos": 7,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          }
+        ]
+      },
+      {
+        "numero": "5511919581944",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          }
+        ]
+      },
+      {
+        "numero": "5521992331089",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          }
+        ]
+      },
+      {
+        "numero": "553192480038",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #9",
+        "idGrupoManter": "120363411953541926@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "558389124458",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #7",
+        "idGrupoManter": "120363429842984322@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "5516974072904",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "5511986081458",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #10",
+        "idGrupoManter": "120363430955711389@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "5512996608230",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #1",
+        "idGrupoManter": "120363430454269959@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363433616623391@g.us",
+            "subject": "Desconto Black Vitalícia #2"
+          },
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          }
+        ]
+      },
+      {
+        "numero": "5511947436529",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          }
+        ]
+      },
+      {
+        "numero": "5511995884216",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363414189453540@g.us",
+            "subject": "Black Vitalícia 2026 #23"
+          }
+        ]
+      },
+      {
+        "numero": "558781493696",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363413809658963@g.us",
+            "subject": "Black Vitalícia 2026 #21"
+          }
+        ]
+      },
+      {
+        "numero": "558287439631",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #1",
+        "idGrupoManter": "120363430454269959@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          }
+        ]
+      },
+      {
+        "numero": "558396438266",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363430955711389@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363413809658963@g.us",
+            "subject": "Black Vitalícia 2026 #21"
+          }
+        ]
+      },
+      {
+        "numero": "555195503049",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363413809658963@g.us",
+            "subject": "Black Vitalícia 2026 #21"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "559881235664",
+        "totalGrupos": 6,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "553199736151",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #4",
+        "idGrupoManter": "120363428393428390@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "557996641919",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #1",
+        "idGrupoManter": "120363430454269959@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          }
+        ]
+      },
+      {
+        "numero": "557781038087",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #8",
+        "idGrupoManter": "120363428064548450@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363413809658963@g.us",
+            "subject": "Black Vitalícia 2026 #21"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "554884266175",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "553284301060",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #6",
+        "idGrupoManter": "120363432586941358@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "5511998903363",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363430880574445@g.us",
+            "subject": "Black Vitalícia 2026 #17"
+          }
+        ]
+      },
+      {
+        "numero": "5521996690590",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #6",
+        "idGrupoManter": "120363432586941358@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363430955711389@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "5521982701192",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "5511995241751",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          }
+        ]
+      },
+      {
+        "numero": "5519988234979",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          }
+        ]
+      },
+      {
+        "numero": "5511993262769",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363413809658963@g.us",
+            "subject": "Black Vitalícia 2026 #21"
+          }
+        ]
+      },
+      {
+        "numero": "558189942772",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363428977680839@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          }
+        ]
+      },
+      {
+        "numero": "553189897770",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          }
+        ]
+      },
+      {
+        "numero": "556293026382",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363431480322216@g.us",
+            "subject": "Desconto Black Vitalícia #13"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          }
+        ]
+      },
+      {
+        "numero": "558195804598",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363414189453540@g.us",
+            "subject": "Black Vitalícia 2026 #23"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "558195276216",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363414189453540@g.us",
+            "subject": "Black Vitalícia 2026 #23"
+          }
+        ]
+      },
+      {
+        "numero": "553897300340",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363414189453540@g.us",
+            "subject": "Black Vitalícia 2026 #23"
+          }
+        ]
+      },
+      {
+        "numero": "553497956090",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          },
+          {
+            "id": "120363414189453540@g.us",
+            "subject": "Black Vitalícia 2026 #23"
+          }
+        ]
+      },
+      {
+        "numero": "558388748778",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          }
+        ]
+      },
+      {
+        "numero": "559284490277",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #1",
+        "idGrupoManter": "120363430454269959@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          }
+        ]
+      },
+      {
+        "numero": "5512997114045",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429177210936@g.us",
+            "subject": "Black Vitalícia 2026 #20"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "5511953306736",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363430955711389@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363413809658963@g.us",
+            "subject": "Black Vitalícia 2026 #21"
+          }
+        ]
+      },
+      {
+        "numero": "556294209339",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          }
+        ]
+      },
+      {
+        "numero": "5522981650714",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "557798988500",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "553491882526",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #1",
+        "idGrupoManter": "120363430454269959@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363428064548450@g.us",
+            "subject": "Desconto Black Vitalícia #8"
+          },
+          {
+            "id": "120363411208093815@g.us",
+            "subject": "Desconto Black Vitalícia #11"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          }
+        ]
+      },
+      {
+        "numero": "557391581195",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363413971329938@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "558193982012",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363431841591156@g.us",
+            "subject": "Black Vitalícia 2026 #16"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "556181783872",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363427669227228@g.us",
+            "subject": "Desconto Black Vitalícia #12"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "557399951770",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363430955711389@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "5511982755674",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #8",
+        "idGrupoManter": "120363428064548450@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363427546204529@g.us",
+            "subject": "Desconto Black Vitalícia #15"
+          },
+          {
+            "id": "120363430839371106@g.us",
+            "subject": "Black Vitalícia 2026 #24"
+          }
+        ]
+      },
+      {
+        "numero": "5511979671022",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363432586941358@g.us",
+            "subject": "Desconto Black Vitalícia #6"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          }
+        ]
+      },
+      {
+        "numero": "5511981893942",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #3",
+        "idGrupoManter": "120363413260334879@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363430955711389@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          },
+          {
+            "id": "120363413278638739@g.us",
+            "subject": "Black Vitalícia 2026 #22"
+          }
+        ]
+      },
+      {
+        "numero": "556392294492",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #7",
+        "idGrupoManter": "120363429842984322@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363428912381401@g.us",
+            "subject": "Black Vitalícia 2026 #18"
+          },
+          {
+            "id": "120363430771045210@g.us",
+            "subject": "Black Vitalícia 2026 #19"
+          }
+        ]
+      },
+      {
+        "numero": "558296639078",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #5",
+        "idGrupoManter": "120363429724712473@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363428884858562@g.us",
+            "subject": "Desconto Black Vitalícia #14"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "559192411147",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363411953541926@g.us",
+            "subject": "Desconto Black Vitalícia #9"
+          },
+          {
+            "id": "120363429546894435@g.us",
+            "subject": "Desconto Black Vitalícia #10"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      },
+      {
+        "numero": "553198858768",
+        "totalGrupos": 5,
+        "grupoManter": "Desconto Black Vitalícia #2",
+        "idGrupoManter": "120363433616623391@g.us",
+        "gruposRemover": [
+          {
+            "id": "120363413260334879@g.us",
+            "subject": "Desconto Black Vitalícia #3"
+          },
+          {
+            "id": "120363429724712473@g.us",
+            "subject": "Desconto Black Vitalícia #5"
+          },
+          {
+            "id": "120363429842984322@g.us",
+            "subject": "Desconto Black Vitalícia #7"
+          },
+          {
+            "id": "120363428808203446@g.us",
+            "subject": "Black Vitalícia 2026 #25"
+          }
+        ]
+      }
+    ],
+    "regra": "Leads em 5 ou mais grupos (expulsão a partir do 5º)"
+  }
+}

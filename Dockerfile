@@ -1,20 +1,39 @@
-# Usa a imagem oficial do Node.js versão 20 (Estável)
+# =====================================================================
+# 🐳 DOCKERFILE // MOTOR AEGIS C2 (EASYPANEL READY)
+# =====================================================================
 FROM node:20-slim
 
-# Instala o git e ferramentas essenciais de compilação no sistema operacional do container
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+# Instala ferramentas essenciais para compilação nativa e fuso horário
+RUN apt-get update && apt-get install -y \
+    git \
+    python3 \
+    make \
+    g++ \
+    tzdata \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Define a pasta de trabalho dentro do container
+# Configura o fuso horário oficial para Horário de Brasília
+ENV TZ=America/Sao_Paulo
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 
-# Copia os arquivos de dependência primeiro para otimizar o cache
-COPY package.json ./
+# Copia manifests primeiro para aproveitar cache do Docker
+COPY package*.json ./
 
-# Instala as dependências do projeto com suporte a git
-RUN npm install
+# Instala todas as dependências de produção
+RUN npm install --omit=dev
 
-# Copia o restante do código do bot para dentro do container
+# Copia todo o código da aplicação
 COPY . .
 
-# Comando padrão para iniciar o motor Aegis
+# Variáveis de ambiente padrão
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Porta do Painel Web para o Easypanel
+EXPOSE 3000
+
+# Inicia o servidor C2 integrado (Painel Web + Sentinela Aegis 24/7)
 CMD ["npm", "start"]

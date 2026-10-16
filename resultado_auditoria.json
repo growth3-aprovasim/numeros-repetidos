@@ -1,0 +1,2358 @@
+{
+  "dataAuditoria": "2026-10-14T18:26:55.282Z",
+  "alvosParaTratar": [
+    {
+      "numero": "5516997046751",
+      "totalGrupos": 112,
+      "grupoManter": "#1 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#2 Projeto Banco do Brasil",
+        "#3 Projeto Banco do Brasil",
+        "#4 Projeto Banco do Brasil",
+        "#5 Projeto Banco do Brasil",
+        "#6 Projeto Banco do Brasil",
+        "#7 Projeto Banco do Brasil",
+        "#8 Projeto Banco do Brasil",
+        "#9 Projeto Banco do Brasil",
+        "#10 Projeto Banco do Brasil",
+        "#11 Projeto Banco do Brasil",
+        "#12 Projeto Banco do Brasil",
+        "#13 Projeto Banco do Brasil",
+        "#14 Projeto Banco do Brasil",
+        "#15 Projeto Banco do Brasil",
+        "#16 Projeto Banco do Brasil",
+        "#17 Projeto Banco do Brasil",
+        "#18 Projeto Banco do Brasil",
+        "#19 Projeto Banco do Brasil",
+        "#20 Projeto Banco do Brasil",
+        "#21 Projeto Banco do Brasil",
+        "#22 Projeto Banco do Brasil",
+        "#23 Projeto Banco do Brasil",
+        "#24 Projeto Banco do Brasil",
+        "#25 Projeto Banco do Brasil",
+        "#26 Projeto Banco do Brasil",
+        "#27 Projeto Banco do Brasil",
+        "#28 Projeto Banco do Brasil",
+        "#29 Projeto Banco do Brasil",
+        "#30 Projeto Banco do Brasil",
+        "#57 Projeto Banco do Brasil",
+        "#58 Projeto Banco do Brasil",
+        "#31 Projeto Banco do Brasil",
+        "#32 Projeto Banco do Brasil",
+        "#59 Projeto Banco do Brasil",
+        "#60 Projeto Banco do Brasil",
+        "#33 Projeto Banco do Brasil",
+        "#61 Projeto Banco do Brasil",
+        "#34 Projeto Banco do Brasil",
+        "#35 Projeto Banco do Brasil",
+        "#62 Projeto Banco do Brasil",
+        "#36 Projeto Banco do Brasil",
+        "#64 Projeto Banco do Brasil",
+        "#63 Projeto Banco do Brasil",
+        "#37 Projeto Banco do Brasil",
+        "#38 Projeto Banco do Brasil",
+        "#65 Projeto Banco do Brasil",
+        "#39 Projeto Banco do Brasil",
+        "#40 Projeto Banco do Brasil",
+        "#41 Projeto Banco do Brasil",
+        "#67 Projeto Banco do Brasil",
+        "#42 Projeto Banco do Brasil",
+        "#43 Projeto Banco do Brasil",
+        "#68 Projeto Banco do Brasil",
+        "#44 Projeto Banco do Brasil",
+        "#45 Projeto Banco do Brasil",
+        "#46 Projeto Banco do Brasil",
+        "#47 Projeto Banco do Brasil",
+        "#48 Projeto Banco do Brasil",
+        "#49 Projeto Banco do Brasil",
+        "#50 Projeto Banco do Brasil",
+        "#51 Projeto Banco do Brasil",
+        "#52 Projeto Banco do Brasil",
+        "#53 Projeto Banco do Brasil",
+        "#54 Projeto Banco do Brasil",
+        "#55 Projeto Banco do Brasil",
+        "#56 Projeto Banco do Brasil",
+        "#117 Projeto Banco do Brasil Pós-Edital",
+        "#117 Projeto Banco do Brasil Pós-Edital",
+        "#119 Projeto Banco do Brasil Pós-Edital",
+        "#117 Projeto Banco do Brasil Pós-Edital",
+        "#117 Projeto Banco do Brasil Pós-Edital",
+        "#118 Projeto Banco do Brasil Pós-Edital",
+        "#118 Projeto Banco do Brasil Pós-Edital",
+        "#120 Projeto Banco do Brasil Pós-Edital",
+        "#118 Projeto Banco do Brasil Pós-Edital",
+        "#119 Projeto Banco do Brasil Pós-Edital",
+        "#118 Projeto Banco do Brasil Pós-Edital",
+        "#121 Projeto Banco do Brasil Pós-Edital",
+        "#119 Projeto Banco do Brasil Pós-Edital",
+        "#119 Projeto Banco do Brasil Pós-Edital",
+        "#119 Projeto Banco do Brasil Pós-Edital",
+        "#120 Projeto Banco do Brasil Pós-Edital",
+        "#120 Projeto Banco do Brasil Pós-Edital",
+        "#122 Projeto Banco do Brasil Pós-Edital",
+        "#120 Projeto Banco do Brasil Pós-Edital",
+        "#121 Projeto Banco do Brasil Pós-Edital",
+        "#120 Projeto Banco do Brasil Pós-Edital",
+        "#121 Projeto Banco do Brasil Pós-Edital",
+        "#123 Projeto Banco do Brasil Pós-Edital",
+        "#121 Projeto Banco do Brasil Pós-Edital",
+        "#121 Projeto Banco do Brasil Pós-Edital",
+        "#122 Projeto Banco do Brasil Pós-Edital",
+        "#122 Projeto Banco do Brasil Pós-Edital",
+        "Projeto Banco do Brasil #77",
+        "Projeto Banco do Brasil #77",
+        "Projeto Banco do Brasil #76",
+        "Projeto Banco do Brasil #75",
+        "Projeto Banco do Brasil #75",
+        "Projeto Banco do Brasil #74",
+        "Projeto Banco do Brasil #74",
+        "Projeto Banco do Brasil #73",
+        "Projeto Banco do Brasil #73",
+        "Projeto Banco do Brasil #72",
+        "Projeto Banco do Brasil #72",
+        "Projeto Banco do Brasil #71",
+        "Projeto Banco do Brasil #71",
+        "Projeto Banco do Brasil #70",
+        "Projeto Banco do Brasil #70",
+        "Projeto Banco do Brasil #69",
+        "Projeto Banco do Brasil #69",
+        "Desconto Black Vitalícia #1"
+      ]
+    },
+    {
+      "numero": "5521991901020",
+      "totalGrupos": 3,
+      "grupoManter": "#59 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#24 Desafio Base Forte",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "556181031566",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #14",
+      "gruposRemover": [
+        "#24 Desafio Base Forte",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "556184029697",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "#24 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "555381348000",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "559889115522",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "553193553838",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "5519994330962",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "557192718528",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "553194767171",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "553199736151",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511974075221",
+      "totalGrupos": 3,
+      "grupoManter": "Projeto Banco do Brasil #74",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #4",
+        "Desconto Black Vitalícia #14"
+      ]
+    },
+    {
+      "numero": "5521999633803",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #4",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "5527999237497",
+      "totalGrupos": 3,
+      "grupoManter": "#9 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "553191415752",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #14",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "557388144995",
+      "totalGrupos": 3,
+      "grupoManter": "#20 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "5511969033684",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "5511926793120",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5516993372422",
+      "totalGrupos": 5,
+      "grupoManter": "Projeto Banco do Brasil #70",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #1",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511952686665",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "557996641919",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "553182386445",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "557781038087",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558191398709",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #17",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "5511949200921",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #17",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "554884266175",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5519991692191",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #17",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "558197258237",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "5511919581944",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5521992331089",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "553284301060",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "556793043677",
+      "totalGrupos": 4,
+      "grupoManter": "Black Vitalícia 2026 #17",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "553192480038",
+      "totalGrupos": 6,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511998903363",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "558496617729",
+      "totalGrupos": 4,
+      "grupoManter": "Black Vitalícia 2026 #17",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "558897505069",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5527998128808",
+      "totalGrupos": 3,
+      "grupoManter": "#17 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "5524981439364",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "557999711429",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "558699720160",
+      "totalGrupos": 3,
+      "grupoManter": "#15 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "5511947621946",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #17",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5511951976948",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #17"
+      ]
+    },
+    {
+      "numero": "556185000587",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5521996690590",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5518996052799",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "559291507326",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "554198763210",
+      "totalGrupos": 3,
+      "grupoManter": "#23 Desafio Base Forte",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5521985262525",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "558389124458",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5521982701192",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "559198358185",
+      "totalGrupos": 3,
+      "grupoManter": "#23 Desafio Base Forte",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511995241751",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "559191913116",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5517999740067",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5522996089629",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "5511973720587",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "553193962411",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "556285636227",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5516974072904",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5519988234979",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5511993262769",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5521964133038",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511986081458",
+      "totalGrupos": 6,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511976686933",
+      "totalGrupos": 3,
+      "grupoManter": "#23 Desafio Base Forte",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "558189942772",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5516991806818",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "556299128789",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "559184010499",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5521972791962",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5511973549205",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5521983919138",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "558896292345",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "558386275458",
+      "totalGrupos": 5,
+      "grupoManter": "#53 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #72",
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5514998378981",
+      "totalGrupos": 3,
+      "grupoManter": "#36 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "558195804598",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #23",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558386901811",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #23",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "558195276216",
+      "totalGrupos": 5,
+      "grupoManter": "#23 Desafio Base Forte",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "553897300340",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "5511984469154",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #23",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #24",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5521976801007",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "553182620218",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "555184624124",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #23",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "553196810074",
+      "totalGrupos": 3,
+      "grupoManter": "#23 Desafio Base Forte",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "5514996215048",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #22",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #23",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511995884216",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "553497956090",
+      "totalGrupos": 6,
+      "grupoManter": "#50 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Desconto Black Vitalícia #9",
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "557988716841",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "558198718674",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #23"
+      ]
+    },
+    {
+      "numero": "5511964465440",
+      "totalGrupos": 4,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #23",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558196681683",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "559888279017",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5512996608230",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5512988482666",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Desconto Black Vitalícia #13"
+      ]
+    },
+    {
+      "numero": "553189897770",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "558299566480",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5522998243090",
+      "totalGrupos": 6,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5511975694067",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5511982220540",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "553598757985",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5511947436529",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "5511958385538",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #13",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "559185589043",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5513996735943",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Desconto Black Vitalícia #15"
+      ]
+    },
+    {
+      "numero": "553197707121",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "557194120954",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #13",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5517981015565",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "556198809747",
+      "totalGrupos": 3,
+      "grupoManter": "#54 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "556791345388",
+      "totalGrupos": 6,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "558781493696",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5511937522928",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "559199180331",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "5527993218686",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "559991661681",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "556993424915",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "558287439631",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "557187423848",
+      "totalGrupos": 3,
+      "grupoManter": "#28 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "559284490277",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "5512997114045",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #20",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "554892217610",
+      "totalGrupos": 6,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "5511950404895",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #20"
+      ]
+    },
+    {
+      "numero": "5511949877708",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5519999445808",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511985215365",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "558193860983",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5519998402937",
+      "totalGrupos": 3,
+      "grupoManter": "#54 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5511953306736",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "558592619832",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "553189786268",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5519999353040",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "558396438266",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "558788370607",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "556993505844",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5511947775216",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #15",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "558488983105",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "555195503049",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #24",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511993300243",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5511943294211",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5511954926199",
+      "totalGrupos": 4,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #24",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "556281239491",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #15",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "556199831581",
+      "totalGrupos": 3,
+      "grupoManter": "#30 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Black Vitalícia 2026 #21"
+      ]
+    },
+    {
+      "numero": "5527999559577",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #15",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #21",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511987632737",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #14",
+        "Desconto Black Vitalícia #15"
+      ]
+    },
+    {
+      "numero": "555599920233",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "557391581195",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "557581610800",
+      "totalGrupos": 3,
+      "grupoManter": "#8 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558994502661",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "553186735789",
+      "totalGrupos": 3,
+      "grupoManter": "#16 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558699037146",
+      "totalGrupos": 7,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "557996348560",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5511954241413",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "559899743438",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5511970799558",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #15"
+      ]
+    },
+    {
+      "numero": "556592115510",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "556294209339",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "557988695889",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "559288196662",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5522981650714",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "557798988500",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5516988235370",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5511971849751",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "556198904035",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #11"
+      ]
+    },
+    {
+      "numero": "5513991459571",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "553491882526",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Desconto Black Vitalícia #11",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5511988272062",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #11",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5515996731354",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558196468161",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #24",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "557399951770",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #24",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "557381297721",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5511982755674",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #14",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5511999122356",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "5518996272700",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #14",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #24"
+      ]
+    },
+    {
+      "numero": "558499379882",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Desconto Black Vitalícia #15"
+      ]
+    },
+    {
+      "numero": "558193982012",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5521964601046",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "559499048101",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "555195477500",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "554499920303",
+      "totalGrupos": 3,
+      "grupoManter": "#34 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "5516993185274",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "559887092570",
+      "totalGrupos": 6,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #12",
+        "Desconto Black Vitalícia #14",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5519992478082",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "#23 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "558196620651",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #12",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5516996012753",
+      "totalGrupos": 3,
+      "grupoManter": "Black Vitalícia 2026 #16",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "557798078998",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511982030883",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "558182639334",
+      "totalGrupos": 4,
+      "grupoManter": "Projeto Banco do Brasil #73",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "554187041941",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "557188349763",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #15",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #16",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "558688710101",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #16"
+      ]
+    },
+    {
+      "numero": "554788930130",
+      "totalGrupos": 3,
+      "grupoManter": "#34 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5511992873294",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5519993800165",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #14",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5521982489589",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #14",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5511981893942",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #19",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "556392294492",
+      "totalGrupos": 4,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #19"
+      ]
+    },
+    {
+      "numero": "5512992263208",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #1",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "554198801837",
+      "totalGrupos": 5,
+      "grupoManter": "#2 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "553197041662",
+      "totalGrupos": 3,
+      "grupoManter": "#50 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "5518988077240",
+      "totalGrupos": 3,
+      "grupoManter": "#19 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #76",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "556193315487",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5521965382943",
+      "totalGrupos": 5,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #14",
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "5511962759733",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "#23 Desafio Base Forte",
+        "Black Vitalícia 2026 #18"
+      ]
+    },
+    {
+      "numero": "5511976520136",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "559881235664",
+      "totalGrupos": 5,
+      "grupoManter": "#68 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #18",
+        "Black Vitalícia 2026 #22",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "558586234684",
+      "totalGrupos": 3,
+      "grupoManter": "#1 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #10"
+      ]
+    },
+    {
+      "numero": "558296639078",
+      "totalGrupos": 5,
+      "grupoManter": "Projeto Banco do Brasil #71",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "559887224907",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #15"
+      ]
+    },
+    {
+      "numero": "559189116158",
+      "totalGrupos": 3,
+      "grupoManter": "#23 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #9",
+        "#23 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "559192411147",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #9",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5512991815777",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #10",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5516992893331",
+      "totalGrupos": 4,
+      "grupoManter": "#1 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #10",
+        "Desconto Black Vitalícia #15",
+        "#23 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "5521983671817",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #14",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "556984451434",
+      "totalGrupos": 3,
+      "grupoManter": "#30 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #72",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "553588056547",
+      "totalGrupos": 3,
+      "grupoManter": "Projeto Banco do Brasil #76",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #8",
+        "Black Vitalícia 2026 #22"
+      ]
+    },
+    {
+      "numero": "5511991937528",
+      "totalGrupos": 3,
+      "grupoManter": "Desconto Black Vitalícia #8",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #15",
+        "Black Vitalícia 2026 #25"
+      ]
+    },
+    {
+      "numero": "5511960809048",
+      "totalGrupos": 3,
+      "grupoManter": "#43 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Desconto Black Vitalícia #1",
+        "Desconto Black Vitalícia #8"
+      ]
+    },
+    {
+      "numero": "558396595222",
+      "totalGrupos": 4,
+      "grupoManter": "#53 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #73",
+        "Desconto Black Vitalícia #1",
+        "#23 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "559881322706",
+      "totalGrupos": 3,
+      "grupoManter": "#8 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#65 Projeto Banco do Brasil",
+        "#23 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "558386627397",
+      "totalGrupos": 3,
+      "grupoManter": "#5 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #71",
+        "#23 Desafio Base Forte"
+      ]
+    },
+    {
+      "numero": "557488562421",
+      "totalGrupos": 3,
+      "grupoManter": "#9 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#16 Projeto Banco do Brasil",
+        "#36 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "554888137015",
+      "totalGrupos": 3,
+      "grupoManter": "#9 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#18 Projeto Banco do Brasil",
+        "#34 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "16282958079",
+      "totalGrupos": 3,
+      "grupoManter": "Projeto Banco do Brasil #76",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #75",
+        "Projeto Banco do Brasil #75"
+      ]
+    },
+    {
+      "numero": "5545920031207",
+      "totalGrupos": 3,
+      "grupoManter": "#16 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#29 Projeto Banco do Brasil",
+        "Projeto Banco do Brasil #70"
+      ]
+    },
+    {
+      "numero": "5511966441956",
+      "totalGrupos": 3,
+      "grupoManter": "#29 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#40 Projeto Banco do Brasil",
+        "Projeto Banco do Brasil #74"
+      ]
+    },
+    {
+      "numero": "553598250057",
+      "totalGrupos": 3,
+      "grupoManter": "#30 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#42 Projeto Banco do Brasil",
+        "Projeto Banco do Brasil #74"
+      ]
+    },
+    {
+      "numero": "558197311091",
+      "totalGrupos": 3,
+      "grupoManter": "#22 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#45 Projeto Banco do Brasil",
+        "Projeto Banco do Brasil #74"
+      ]
+    },
+    {
+      "numero": "557381589249",
+      "totalGrupos": 4,
+      "grupoManter": "#17 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#24 Projeto Banco do Brasil",
+        "#33 Projeto Banco do Brasil",
+        "#38 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "556194133107",
+      "totalGrupos": 3,
+      "grupoManter": "#22 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#35 Projeto Banco do Brasil",
+        "#68 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "553299030362",
+      "totalGrupos": 3,
+      "grupoManter": "#31 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#32 Projeto Banco do Brasil",
+        "#68 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "553599299175",
+      "totalGrupos": 3,
+      "grupoManter": "#22 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#32 Projeto Banco do Brasil",
+        "#39 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "554699075790",
+      "totalGrupos": 3,
+      "grupoManter": "#22 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#57 Projeto Banco do Brasil",
+        "Projeto Banco do Brasil #71"
+      ]
+    },
+    {
+      "numero": "558196219200",
+      "totalGrupos": 3,
+      "grupoManter": "#6 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#7 Projeto Banco do Brasil",
+        "#44 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "556384268703",
+      "totalGrupos": 3,
+      "grupoManter": "#15 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#17 Projeto Banco do Brasil",
+        "#19 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "559391210578",
+      "totalGrupos": 3,
+      "grupoManter": "#39 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "Projeto Banco do Brasil #76",
+        "Projeto Banco do Brasil #72"
+      ]
+    },
+    {
+      "numero": "557197008140",
+      "totalGrupos": 3,
+      "grupoManter": "#38 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#39 Projeto Banco do Brasil",
+        "#40 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "557798387268",
+      "totalGrupos": 3,
+      "grupoManter": "#23 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#59 Projeto Banco do Brasil",
+        "#56 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "558591294673",
+      "totalGrupos": 3,
+      "grupoManter": "#14 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#20 Projeto Banco do Brasil",
+        "#65 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "553173607264",
+      "totalGrupos": 3,
+      "grupoManter": "#10 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#64 Projeto Banco do Brasil",
+        "#53 Projeto Banco do Brasil"
+      ]
+    },
+    {
+      "numero": "559984209196",
+      "totalGrupos": 3,
+      "grupoManter": "#45 Projeto Banco do Brasil",
+      "gruposRemover": [
+        "#49 Projeto Banco do Brasil",
+        "#51 Projeto Banco do Brasil"
+      ]
+    }
+  ],
+  "totalRemocoes": 686
+}

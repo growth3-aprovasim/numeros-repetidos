@@ -1,14 +1,20 @@
 {
   "name": "aegis-sentinel",
   "version": "7.8.0",
-  "description": "Motor de Defesa Anti-Hacker Aegis para WhatsApp",
-  "main": "sentinel.js",
+  "description": "Motor de Defesa Anti-Hacker Aegis para WhatsApp com Painel C2",
+  "main": "server.js",
   "scripts": {
-    "start": "node sentinel.js"
+    "start": "node server.js",
+    "black": "node operacao_black_aegis.js",
+    "sentinel": "node sentinel.js",
+    "export-sessions": "node exportar_sessoes.js"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.5",
+    "adm-zip": "^0.5.16",
     "dotenv": "^16.4.5",
-    "pino": "^9.0.0"
+    "express": "^5.3.0",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0"
   }
 }
