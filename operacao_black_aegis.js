@@ -276,6 +276,23 @@ const feedEventos = [];
 
 // Estado em RAM das contas de ADMs (para QR Code & Pairing Code via site)
 const estadoAdms = new Map();
+const timersReconexao = new Map();
+
+function agendarReconexao(indice, ms = 2500) {
+    cancelarReconexao(indice);
+    const t = setTimeout(() => {
+        timersReconexao.delete(indice);
+        conectarSniper(indice).catch(() => {});
+    }, ms);
+    timersReconexao.set(indice, t);
+}
+
+function cancelarReconexao(indice) {
+    if (timersReconexao.has(indice)) {
+        clearTimeout(timersReconexao.get(indice));
+        timersReconexao.delete(indice);
+    }
+}
 
 function adicionarEventoFeed(tipo, texto) {
     feedEventos.unshift({
@@ -405,6 +422,8 @@ function obterSnipersDisponiveis(idGrupo) {
 // Conexão autônoma de ADM via pasta existente
 async function conectarSniper(indice) {
     indice = Number(indice);
+    cancelarReconexao(indice);
+
     const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
     if (!fs.existsSync(pastaAuth)) return null;
 
@@ -430,11 +449,11 @@ async function conectarSniper(indice) {
             auth: state,
             printQRInTerminal: false,
             logger: pino({ level: 'silent' }),
-            browser: Browsers.windows('Desktop'),
+            browser: Browsers.ubuntu('Chrome'),
             markOnlineOnConnect: true,
             generateHighQualityLinkPreview: true,
             syncFullHistory: false,
-            defaultQueryTimeoutMs: undefined,
+            defaultQueryTimeoutMs: 60_000,
             connectTimeoutMs: 60_000,
             getMessage: async () => ({ conversation: '' })
         });
@@ -446,6 +465,7 @@ async function conectarSniper(indice) {
 
             sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
                 if (connection === 'open') {
+                    cancelarReconexao(indice);
                     const num = extrairNumeroLimpo(sock.user?.id);
                     console.log(`[✅ ADM 0${indice}] Conectado e de olho nos grupos (+${num})`);
                     adicionarEventoFeed('ADM', `✅ Administrador 0${indice} operacional (+${formatarExibicao(num)})`);
@@ -485,6 +505,7 @@ async function conectarSniper(indice) {
 
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
                     const ehLogout = statusCode === DisconnectReason.loggedOut;
+                    const erroMsg = lastDisconnect?.error?.message || '';
 
                     if (ehLogout) {
                         console.log(`[❌ ADM 0${indice}] Deslogado pelo WhatsApp.`);
@@ -501,8 +522,8 @@ async function conectarSniper(indice) {
                         try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
                         if (!resolvido) { resolvido = true; resolve(null); }
                     } else {
-                        console.log(`[⚠️ ADM 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'}). Reconectando em 3s...`);
-                        setTimeout(() => conectarSniper(indice), 3000);
+                        console.log(`[⚠️ ADM 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'} - ${erroMsg}). Reconectando em 3s...`);
+                        agendarReconexao(indice, 3000);
                     }
                 }
             });
@@ -518,10 +539,9 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
     indice = Number(indice);
     if (!indice || indice < 1) throw new Error('Índice de administrador inválido.');
 
+    cancelarReconexao(indice);
+
     const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
-    if (!fs.existsSync(pastaAuth)) {
-        fs.mkdirSync(pastaAuth, { recursive: true });
-    }
 
     // Fecha socket existente no mesmo slot se houver e remove de snipersAtivos
     const idxExistente = snipersAtivos.findIndex(x => x.indice === indice);
@@ -565,18 +585,18 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.windows('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         markOnlineOnConnect: true,
         generateHighQualityLinkPreview: true,
         syncFullHistory: false,
-        defaultQueryTimeoutMs: undefined,
+        defaultQueryTimeoutMs: 60_000,
         connectTimeoutMs: 60_000,
         getMessage: async () => ({ conversation: '' })
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Se for código de pareamento, solicita o código de 8 dígitos após 2 segundos
+    // Se for código de pareamento, solicita o código de 8 dígitos
     if (tipoConexao === 'codigo') {
         setTimeout(async () => {
             try {
@@ -615,8 +635,9 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
             }
         }
 
-        // 3. CONECTADO
+        // 2. CONECTADO
         if (connection === 'open') {
+            cancelarReconexao(indice);
             const meuNum = extrairNumeroLimpo(sock.user?.id);
             console.log(`[✅ ADM 0${indice}] Conectado com sucesso! (+${meuNum})`);
             adicionarEventoFeed('ADM', `✅ Administrador 0${indice} conectado com sucesso (+${formatarExibicao(meuNum)})`);
@@ -643,16 +664,19 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
             }
         }
 
-        // 4. FECHADO
+        // 3. FECHADO (RECONEXÃO AUTOMÁTICA PÓS-PAREAMENTO)
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const ehLogout = statusCode === DisconnectReason.loggedOut;
+            const erroMsg = lastDisconnect?.error?.message || '';
+
+            console.log(`[⚠️ ADM 0${indice}] Conexão fechada durante pareamento (Status ${statusCode || 'Drop'}: ${erroMsg})`);
 
             let sniperObj = snipersAtivos.find(x => x.indice === indice);
             if (sniperObj) sniperObj.conectado = false;
 
             if (ehLogout) {
-                console.log(`[❌ ADM 0${indice}] Deslogado.`);
+                console.log(`[❌ ADM 0${indice}] Deslogado pelo WhatsApp.`);
                 estado.conectado = false;
                 estado.status = 'desconectado';
                 estado.numero = null;
@@ -661,9 +685,17 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
                 estado.atualizadoEm = Date.now();
                 try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
             } else {
-                if (state.creds.registered && estado.status === 'conectado') {
-                    setTimeout(() => conectarSniper(indice), 3000);
-                }
+                // Quando o WhatsApp do celular escaneia o QR ou digita o código, ele reinicia o socket (Status 515 restartRequired)
+                // É OBRIGATÓRIO reconectar para concluir a autenticação com o celular!
+                const temCreds = fs.existsSync(path.join(pastaAuth, 'creds.json'));
+                console.log(`[🔄 ADM 0${indice}] Reconectando em 2s para concluir handshake com celular (Creds salvas: ${temCreds})...`);
+                setTimeout(() => {
+                    if (temCreds) {
+                        conectarSniper(indice);
+                    } else if (tipoConexao === 'qr') {
+                        conectarAdmManual({ indice, tipoConexao: 'qr' }).catch(() => {});
+                    }
+                }, 2000);
             }
         }
     });
@@ -674,6 +706,8 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
 // Desconectar e limpar credenciais de um ADM
 async function desconectarAdm(indice) {
     indice = Number(indice);
+    cancelarReconexao(indice);
+
     const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
 
     const idx = snipersAtivos.findIndex(x => x.indice === indice);
