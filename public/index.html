@@ -225,12 +225,19 @@
                     </div>
                     
                     <div class="tools-btn-grid">
-                        <a href="/api/backup/sessoes" class="btn btn-secondary" id="btn-backup-sessoes" download>
+                        <a href="/api/backup/sessoes" class="btn btn-secondary" id="btn-backup-sessoes" download title="Baixar todas as credenciais do WhatsApp em um arquivo ZIP">
                             <span class="btn-icon">📥</span> Baixar Sessões (ZIP)
                         </a>
-                        <a href="/api/backup/whitelist" class="btn btn-secondary" id="btn-backup-whitelist" download>
-                            <span class="btn-icon">📄</span> Baixar Whitelist (JSON)
+                        <label class="btn btn-secondary" id="label-upload-sessoes" style="cursor: pointer; margin: 0;" title="Enviar o arquivo ZIP de sessões para o servidor">
+                            <span class="btn-icon">📤</span> Restaurar Sessões (ZIP)
+                            <input type="file" id="input-upload-sessoes" accept=".zip" style="display: none;">
+                        </label>
+                        <a href="/api/backup/whitelist" class="btn btn-secondary" id="btn-backup-whitelist" download title="Baixar arquivo whitelist_aegis.json">
+                            <span class="btn-icon">📄</span> Baixar Whitelist
                         </a>
+                        <button class="btn btn-secondary" id="btn-reconectar-snipers" type="button" title="Disparar conexão dos 4 Snipers agora">
+                            <span class="btn-icon">🔄</span> Conectar Snipers
+                        </button>
                     </div>
                 </section>
             </div>

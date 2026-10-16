@@ -389,12 +389,29 @@ app.post('/api/restore/sessoes', express.raw({ type: 'application/zip', limit: '
         // Atualiza whitelist se veio no zip
         recarregarWhitelist();
 
+        // Dispara a conexão dos snipers automaticamente
+        setTimeout(() => {
+            console.log('[🚀] Conectando Snipers após restauração das credenciais...');
+            iniciarOperacaoAegisCompleta().catch(e => console.error('[!] Falha ao iniciar após restore:', e));
+        }, 1200);
+
         res.json({
             sucesso: true,
-            mensagem: 'Sessões e configurações extraídas com sucesso no servidor! Reinicie o container para ativar os novos acessos.'
+            mensagem: 'Sessões restauradas com sucesso! Conectando Snipers no servidor...'
         });
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Forçar conexão dos Snipers manualmente pelo painel
+app.post('/api/snipers/conectar', (req, res) => {
+    try {
+        console.log('[🚀] Disparo manual de conexão dos Snipers solicitado pelo Painel Web...');
+        iniciarOperacaoAegisCompleta().catch(e => console.error('[!] Erro ao conectar Snipers:', e));
+        res.json({ sucesso: true, mensagem: 'Comando de conexão enviado aos Snipers.' });
+    } catch (e) {
+        res.status(500).json({ sucesso: false, erro: e.message });
     }
 });
 

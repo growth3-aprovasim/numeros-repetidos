@@ -710,8 +710,10 @@ async function iniciarOperacaoAegisCompleta() {
     }
 
     if (snipersAtivos.length === 0) {
-        console.error('❌ Nenhum Sniper pôde ser conectado.');
-        process.exit(1);
+        console.warn('⚠️ [AVISO] Nenhum Sniper com sessão válida pôde ser conectado no momento.');
+        console.log('📌 O Painel Web continua 100% ativo. Envie suas sessões pelo site para conectar os Snipers.');
+        adicionarEventoFeed('SISTEMA', '⚠️ Nenhum Sniper conectado. Envie as credenciais pelo Painel Web.');
+        return;
     }
 
     console.log(`\n✅ ${snipersAtivos.length} Snipers armados e operacionais.`);

@@ -472,6 +472,57 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
+    // 📦 UPLOAD DE SESSÕES & RECONEXÃO DOS SNIPERS
+    // =================================================================
+    const inputUploadSessoes = document.getElementById('input-upload-sessoes');
+    if (inputUploadSessoes) {
+        inputUploadSessoes.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            showToast('Enviando e descompactando sessões no servidor...', 'warning');
+
+            try {
+                const buffer = await file.arrayBuffer();
+                const res = await fetch('/api/restore/sessoes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/zip' },
+                    body: buffer
+                });
+                const data = await res.json();
+                if (data.sucesso) {
+                    showToast(data.mensagem || 'Sessões restauradas com sucesso!', 'success');
+                    setTimeout(() => {
+                        atualizarStatusServidor();
+                        carregarWhitelist();
+                    }, 2000);
+                } else {
+                    showToast(data.erro || 'Falha ao restaurar sessões.', 'error');
+                }
+            } catch (err) {
+                showToast('Erro ao enviar arquivo ZIP de sessões.', 'error');
+            } finally {
+                inputUploadSessoes.value = '';
+            }
+        });
+    }
+
+    const btnReconectarSnipers = document.getElementById('btn-reconectar-snipers');
+    if (btnReconectarSnipers) {
+        btnReconectarSnipers.addEventListener('click', async () => {
+            showToast('Disparando conexão dos 4 Snipers...', 'warning');
+            try {
+                const res = await fetch('/api/snipers/conectar', { method: 'POST' });
+                const data = await res.json();
+                showToast(data.mensagem || 'Comando enviado!', 'success');
+                setTimeout(atualizarStatusServidor, 2000);
+            } catch (e) {
+                showToast('Erro ao disparar conexão dos Snipers.', 'error');
+            }
+        });
+    }
+
+    // =================================================================
     // 🧹 UTILITÁRIOS
     // =================================================================
     function escapeHtml(str) {
