@@ -19,8 +19,12 @@ const {
     salvarBlacklist,
     estaNaBlacklist,
     banirPermanente,
-    desbanir,
     obterStatusAdms,
+    obterStatusAdmsPorCampanha,
+    adicionarSniperCampanha,
+    removerSniperCampanha,
+    carregarSnipersCampanhas,
+    conectarSniper,
     conectarAdmManual,
     desconectarAdm,
     obterStatusEspioes,
@@ -259,6 +263,64 @@ app.post('/api/espioes/:indice/conectar-codigo', conectarCodigoHandler);
 
 app.post('/api/adms/:indice/desconectar', desconectarAdmHandler);
 app.post('/api/espioes/:indice/desconectar', desconectarAdmHandler);
+
+// 🎯 LISTAGEM DE ADMS AGRUPADOS POR CAMPANHA DO SENDFLOW
+app.get('/api/adms/por-campanha', (req, res) => {
+    try {
+        const dados = obterStatusAdmsPorCampanha();
+        res.json(dados);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// ➕ ADICIONAR NOVO ADM SNIPER PARA UMA CAMPANHA ESPECÍFICA
+app.post('/api/adms/campanha/:campaignId/novo', (req, res) => {
+    try {
+        const { campaignId } = req.params;
+        const { campaignName } = req.body || {};
+        const resultado = adicionarSniperCampanha({ campaignId, campaignName });
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// 🗑️ REMOVER ADM SNIPER (FINALIZA SESSÃO E APAGA CREDENCIAIS DAQUELA CAMPANHA)
+const removerAdmHandler = async (req, res) => {
+    try {
+        const indice = Number(req.params.indice);
+        if (!indice || indice < 1) {
+            return res.status(400).json({ sucesso: false, erro: 'ID de ADM inválido.' });
+        }
+        const resultado = await removerSniperCampanha(indice);
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+};
+
+app.delete('/api/adms/:indice', removerAdmHandler);
+app.post('/api/adms/:indice/remover', removerAdmHandler);
+app.delete('/api/espioes/:indice', removerAdmHandler);
+app.post('/api/espioes/:indice/remover', removerAdmHandler);
+
+// 🔄 DISPARAR RECONEXÃO EM TODOS OS ADMS CADASTRADOS
+app.post('/api/snipers/conectar', async (req, res) => {
+    try {
+        const snipers = carregarSnipersCampanhas();
+        for (const s of snipers) {
+            const idNum = Number(s.id || s.indice);
+            conectarSniper(idNum).catch(() => {});
+        }
+        res.json({
+            sucesso: true,
+            mensagem: `Tentativa de reconexão disparada para todos os ${snipers.length} ADMs do sistema.`
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
 
 // =====================================================================
 // ⛔ ROTAS DE GESTÃO DE BLACKLIST (BANIDOS PERMANENTES)

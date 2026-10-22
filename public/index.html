@@ -373,14 +373,14 @@
                 </div>
 
                 <!-- ============================================================= -->
-                <!-- VISTA 2: ADMS DOS GRUPOS (QR CODE & CÓDIGO) -->
+                <!-- VISTA 2: ADMS DOS GRUPOS POR CAMPANHA (QR CODE & CÓDIGO) -->
                 <!-- ============================================================= -->
                 <div class="module-view" id="view-espioes">
                     <section class="glass-card" id="card-gerenciador-espioes">
                         <div class="card-header espioes-header">
                             <div class="card-title-group">
-                                <h2 class="card-title">🛡️ Central de ADMs dos Grupos</h2>
-                                <p class="card-subtitle">Conecte as contas de WhatsApp com permissão de Administrador nos grupos escaneando o QR Code ou via Código de Pareamento por telefone.</p>
+                                <h2 class="card-title">🛡️ Central de ADMs por Campanha</h2>
+                                <p class="card-subtitle">Cada campanha possui seus próprios ADMs Snipers dedicados. Conecte chips via QR Code ou Código, ou remova os ADMs de campanhas finalizadas sem afetar as demais.</p>
                             </div>
                             <div class="header-actions">
                                 <button class="btn btn-sm btn-secondary" id="btn-force-connect-all" title="Disparar tentativa de reconexão em todas as contas de ADM">
@@ -389,30 +389,25 @@
                             </div>
                         </div>
 
-                        <!-- BARRA DE CONTROLE DE QUANTIDADE RÁPIDA -->
+                        <!-- BARRA DE CONTROLE & FILTRO DE CAMPANHAS -->
                         <div class="espioes-control-bar">
                             <div class="control-bar-info">
-                                <span class="control-bar-label">Quantidade de Contas de ADM no Sistema:</span>
-                                <span class="control-bar-help">Defina quantos WhatsApps com permissão de administrador vigiam e removem excedentes nos grupos.</span>
+                                <span class="control-bar-label">Organização por Campanha SendFlow:</span>
+                                <span class="control-bar-help" id="adms-summary-text">Os banimentos são realizados exclusivamente pelos ADMs designados para a respectiva campanha.</span>
                             </div>
                             <div class="control-bar-action">
-                                <div class="quantity-input-group">
-                                    <button class="btn-qty-step" id="btn-qty-minus">-</button>
-                                    <input type="number" id="input-quantidade-espioes-quick" class="qty-number-input" min="1" max="20" value="4">
-                                    <button class="btn-qty-step" id="btn-qty-plus">+</button>
+                                <div class="search-wrap" style="min-width: 260px;">
+                                    <span class="search-icon">🔍</span>
+                                    <input type="text" id="input-search-adms-campanhas" class="search-input" placeholder="Filtrar campanha por nome...">
                                 </div>
-                                <button class="btn-sm btn-primary" id="btn-save-qty-quick">
-                                    💾 Aplicar
-                                </button>
                             </div>
                         </div>
 
-                        <!-- GRID RESPONSIVO DE CARDS DE ADMs -->
-                        <div class="espioes-grid" id="espioes-cards-container">
-                            <!-- Cards de ADMs injetados dinamicamente via app.js -->
+                        <!-- CONTAINER ONDE AS SEÇÕES DE CADA CAMPANHA SÃO INJETADAS DINAMICAMENTE -->
+                        <div id="espioes-campanhas-container" class="campanhas-adms-wrapper">
                             <div class="loading-state">
                                 <span class="spinner"></span>
-                                <span>Carregando administradores...</span>
+                                <span>Carregando campanhas e ADMs snipers...</span>
                             </div>
                         </div>
                     </section>
@@ -796,6 +791,21 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="modal-unban-cancel">Cancelar</button>
                 <button class="btn btn-primary" id="modal-unban-confirm-btn">Sim, Desbanir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 7: CONFIRMAÇÃO DE REMOÇÃO DE ADM SNIPER -->
+    <div class="modal-overlay" id="modal-delete-sniper" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-icon">🗑️</div>
+            <h3 class="modal-title text-rose">Remover ADM desta Campanha?</h3>
+            <p class="modal-message" id="modal-delete-sniper-message">
+                Tem certeza que deseja remover este Administrador Sniper? A sessão será desconectada e as credenciais apagadas. Os ADMs das outras campanhas continuarão protegidos e funcionando normalmente.
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="modal-btn-cancel-delete-sniper">Cancelar</button>
+                <button class="btn btn-danger" id="modal-btn-confirm-delete-sniper">Sim, Remover ADM</button>
             </div>
         </div>
     </div>

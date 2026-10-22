@@ -35,6 +35,7 @@ whitelist_aegis.json
 whitelist_metadata.json
 blacklist_aegis.json
 campanhas_adms.json
+snipers_campanhas.json
 sendflow_campanhas_ativas.json
 resultado_auditoria.json
 resultado_campanhas.json

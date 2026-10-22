@@ -70,6 +70,7 @@ const ARQUIVO_CONFIG = path.join(__dirname, 'config_aegis.json');
 const ARQUIVO_WHITELIST = path.join(__dirname, 'whitelist_aegis.json');
 const ARQUIVO_BLACKLIST = path.join(__dirname, 'blacklist_aegis.json');
 const ARQUIVO_LOG = path.join(__dirname, 'log_operacao_aegis.json');
+const ARQUIVO_SNIPERS_CAMPANHAS = path.join(__dirname, 'snipers_campanhas.json');
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -369,20 +370,177 @@ function recarregarWhitelist() {
     return cacheWhitelist.length;
 }
 
-function obterStatusAdms() {
-    configAtual = carregarConfig();
-    const total = configAtual.quantidadeAdms || 4;
-    const lista = [];
+// =====================================================================
+// 🎯 GESTÃO DE ADMS SNIPERS POR CAMPANHA DO SENDFLOW
+// =====================================================================
+function carregarSnipersCampanhas() {
+    try {
+        if (fs.existsSync(ARQUIVO_SNIPERS_CAMPANHAS)) {
+            const raw = JSON.parse(fs.readFileSync(ARQUIVO_SNIPERS_CAMPANHAS, 'utf-8'));
+            if (Array.isArray(raw) && raw.length > 0) {
+                return raw;
+            }
+        }
+    } catch (e) {
+        console.error('[!] Erro ao carregar snipers_campanhas.json:', e.message);
+    }
 
-    for (let i = 1; i <= total; i++) {
-        let estado = estadoAdms.get(i);
-        const sAtivo = snipersAtivos.find(x => x.indice === i && x.conectado && x.sock?.ws?.isOpen);
+    // Inicialização padrão inteligente baseada nas campanhas ativas do SendFlow
+    configAtual = carregarConfig();
+    const qtd = configAtual.quantidadeAdms || 4;
+    const campanhasAtivas = (getCacheCampanhas()?.campanhas || []);
+    const c1 = campanhasAtivas[0] || { id: '1mVRQCG59lTdqDxWZn3n', name: 'Black Vitalícia [BV-26]' };
+    const c2 = campanhasAtivas[1] || { id: 'FeirPHs7jY1cgayuSles', name: 'Base Forte 2026' };
+
+    const snipersIniciais = [];
+    for (let i = 1; i <= qtd; i++) {
+        const camp = (i <= Math.ceil(qtd / 2)) ? c1 : c2;
+        snipersIniciais.push({
+            id: i,
+            indice: i,
+            pasta: `auth_sniper_${i}`,
+            campaignId: camp.id,
+            campaignName: camp.name,
+            criadoEm: new Date().toISOString()
+        });
+    }
+
+    salvarSnipersCampanhas(snipersIniciais);
+    return snipersIniciais;
+}
+
+function salvarSnipersCampanhas(lista) {
+    try {
+        fs.writeFileSync(ARQUIVO_SNIPERS_CAMPANHAS, JSON.stringify(lista, null, 2), 'utf-8');
+    } catch (e) {
+        console.error('[!] Erro ao salvar snipers_campanhas.json:', e.message);
+    }
+}
+
+function obterMetaSniper(id) {
+    const lista = carregarSnipersCampanhas();
+    const idNum = Number(id);
+    return lista.find(s => Number(s.id) === idNum || Number(s.indice) === idNum) || null;
+}
+
+function adicionarSniperCampanha({ campaignId, campaignName }) {
+    if (!campaignId) throw new Error('ID da campanha é obrigatório.');
+
+    if (!campaignName) {
+        const camp = (getCacheCampanhas()?.campanhas || []).find(c => c.id === campaignId);
+        campaignName = camp?.name || campaignId;
+    }
+
+    const lista = carregarSnipersCampanhas();
+    const maxId = lista.reduce((max, s) => Math.max(max, Number(s.id || s.indice || 0)), 0);
+    const novoId = maxId + 1;
+
+    const novoSniper = {
+        id: novoId,
+        indice: novoId,
+        pasta: `auth_sniper_${novoId}`,
+        campaignId,
+        campaignName,
+        criadoEm: new Date().toISOString()
+    };
+
+    lista.push(novoSniper);
+    salvarSnipersCampanhas(lista);
+
+    configAtual.quantidadeAdms = lista.length;
+    salvarConfig({ quantidadeAdms: lista.length });
+
+    const estado = {
+        indice: novoId,
+        id: novoId,
+        campaignId,
+        campaignName,
+        conectado: false,
+        status: 'desconectado',
+        numero: null,
+        qrCodeDataUrl: null,
+        pairingCode: null,
+        erroMsg: null,
+        atualizadoEm: Date.now()
+    };
+    estadoAdms.set(novoId, estado);
+
+    adicionarEventoFeed('ADM', `➕ Novo ADM Sniper 0${novoId} criado para a campanha "${campaignName}".`);
+
+    return {
+        sucesso: true,
+        mensagem: `ADM Sniper 0${novoId} adicionado à campanha "${campaignName}" com sucesso!`,
+        sniper: novoSniper
+    };
+}
+
+async function removerSniperCampanha(id) {
+    id = Number(id);
+    if (!id || id < 1) throw new Error('ID do ADM inválido.');
+
+    cancelarReconexao(id);
+
+    // 1. Desconecta o socket se ativo
+    const idxAtivo = snipersAtivos.findIndex(x => x.indice === id);
+    if (idxAtivo !== -1) {
+        const s = snipersAtivos[idxAtivo];
+        try {
+            s.sock.ev.removeAllListeners();
+            if (s.sock.logout) await s.sock.logout();
+            else if (s.sock.ws) s.sock.ws.close();
+        } catch (e) { }
+        snipersAtivos.splice(idxAtivo, 1);
+    }
+
+    // 2. Remove com segurança a pasta de credenciais deste sniper
+    const pastaAuth = path.join(__dirname, `auth_sniper_${id}`);
+    if (fs.existsSync(pastaAuth)) {
+        try {
+            fs.rmSync(pastaAuth, { recursive: true, force: true });
+        } catch (e) {
+            console.error(`[!] Erro ao remover pasta auth_sniper_${id}:`, e.message);
+        }
+    }
+
+    // 3. Limpa estado em RAM
+    estadoAdms.delete(id);
+
+    // 4. Remove do arquivo de snipers
+    let lista = carregarSnipersCampanhas();
+    const itemRemovido = lista.find(s => Number(s.id) === id || Number(s.indice) === id);
+    lista = lista.filter(s => Number(s.id) !== id && Number(s.indice) !== id);
+    salvarSnipersCampanhas(lista);
+
+    configAtual.quantidadeAdms = lista.length;
+    salvarConfig({ quantidadeAdms: lista.length });
+
+    const nomeCampanha = itemRemovido?.campaignName || 'Campanha';
+    adicionarEventoFeed('ADM', `🗑️ ADM Sniper 0${id} removido da campanha "${nomeCampanha}" e credenciais apagadas.`);
+
+    return {
+        sucesso: true,
+        mensagem: `ADM Sniper 0${id} removido da campanha com sucesso!`
+    };
+}
+
+function obterStatusAdmsPorCampanha() {
+    configAtual = carregarConfig();
+    const campanhasAtivas = (getCacheCampanhas()?.campanhas || []);
+    const snipersCadastrados = carregarSnipersCampanhas();
+
+    const snipersComStatus = snipersCadastrados.map(sniper => {
+        const id = Number(sniper.id || sniper.indice);
+        let estado = estadoAdms.get(id);
+        const sAtivo = snipersAtivos.find(x => x.indice === id && x.conectado && x.sock?.ws?.isOpen);
 
         if (sAtivo) {
             const num = extrairNumeroLimpo(sAtivo.sock?.user?.id);
             if (!estado) {
                 estado = {
-                    indice: i,
+                    indice: id,
+                    id: id,
+                    campaignId: sniper.campaignId,
+                    campaignName: sniper.campaignName,
                     conectado: true,
                     status: 'conectado',
                     numero: num,
@@ -391,17 +549,22 @@ function obterStatusAdms() {
                     erroMsg: null,
                     atualizadoEm: Date.now()
                 };
-                estadoAdms.set(i, estado);
+                estadoAdms.set(id, estado);
             } else {
                 estado.conectado = true;
                 estado.status = 'conectado';
                 estado.numero = num;
+                estado.campaignId = sniper.campaignId;
+                estado.campaignName = sniper.campaignName;
             }
         } else if (!estado) {
-            const pastaAuth = path.join(__dirname, `auth_sniper_${i}`);
+            const pastaAuth = path.join(__dirname, `auth_sniper_${id}`);
             const temCreds = fs.existsSync(path.join(pastaAuth, 'creds.json'));
             estado = {
-                indice: i,
+                indice: id,
+                id: id,
+                campaignId: sniper.campaignId,
+                campaignName: sniper.campaignName,
                 conectado: false,
                 status: temCreds ? 'pronto_para_conectar' : 'desconectado',
                 numero: null,
@@ -410,23 +573,70 @@ function obterStatusAdms() {
                 erroMsg: null,
                 atualizadoEm: Date.now()
             };
-            estadoAdms.set(i, estado);
+            estadoAdms.set(id, estado);
         }
 
-        lista.push({
-            indice: i,
-            conectado: estado.conectado,
+        return {
+            id,
+            indice: id,
+            campaignId: sniper.campaignId,
+            campaignName: sniper.campaignName,
+            conectado: !!estado.conectado,
             status: estado.status,
             numero: estado.numero,
             numeroFormatado: formatarExibicao(estado.numero),
             qrCodeDataUrl: estado.qrCodeDataUrl,
             pairingCode: estado.pairingCode,
             erroMsg: estado.erroMsg,
-            atualizadoEm: estado.atualizadoEm
-        });
-    }
+            atualizadoEm: estado.atualizadoEm,
+            criadoEm: sniper.criadoEm
+        };
+    });
 
-    return lista;
+    // Mapeamento das campanhas ativas
+    const mapaCampanhas = new Map();
+    campanhasAtivas.forEach(c => {
+        mapaCampanhas.set(c.id, {
+            id: c.id,
+            name: c.name,
+            type: c.type,
+            totalGrupos: c.grupos ? c.grupos.length : (c.totalGrupos || 0),
+            snipers: []
+        });
+    });
+
+    const snipersSemCampanha = [];
+
+    snipersComStatus.forEach(s => {
+        if (s.campaignId && mapaCampanhas.has(s.campaignId)) {
+            mapaCampanhas.get(s.campaignId).snipers.push(s);
+        } else {
+            snipersSemCampanha.push(s);
+        }
+    });
+
+    const campanhasAgrupadas = Array.from(mapaCampanhas.values()).map(camp => ({
+        ...camp,
+        totalSnipers: camp.snipers.length,
+        conectados: camp.snipers.filter(s => s.conectado).length
+    }));
+
+    const totalConectadosGeral = snipersComStatus.filter(s => s.conectado).length;
+
+    return {
+        sucesso: true,
+        totalCampanhas: campanhasAgrupadas.length,
+        totalSnipersGeral: snipersComStatus.length,
+        totalConectadosGeral,
+        campanhas: campanhasAgrupadas,
+        globais: snipersSemCampanha,
+        snipers: snipersComStatus
+    };
+}
+
+function obterStatusAdms() {
+    const dados = obterStatusAdmsPorCampanha();
+    return dados.snipers;
 }
 
 function obterEstadoAegis() {
@@ -511,6 +721,28 @@ function obterNomeGrupo(idGrupo) {
 }
 
 function obterSnipersDisponiveis(idGrupo) {
+    const infoCampanha = obterInfoGrupoCampanha(idGrupo);
+    const campaignId = infoCampanha ? infoCampanha.releaseId : null;
+
+    // 1. Prioridade Máxima: ADMs Snipers vinculados EXCLUSIVAMENTE a esta campanha
+    if (campaignId) {
+        const snipersDaCampanha = snipersAtivos.filter(s => {
+            const meta = obterMetaSniper(s.indice);
+            return meta && meta.campaignId === campaignId && s.conectado && s.sock?.ws?.isOpen;
+        });
+
+        if (snipersDaCampanha.length > 0) {
+            // Se algum desses snipers já for admin confirmado no grupo, prioriza ele
+            const indicesAdminNoGrupo = mapaAdminGrupos.get(idGrupo);
+            if (indicesAdminNoGrupo && indicesAdminNoGrupo.size > 0) {
+                const confirmados = snipersDaCampanha.filter(s => indicesAdminNoGrupo.has(s.indice));
+                if (confirmados.length > 0) return confirmados;
+            }
+            return snipersDaCampanha;
+        }
+    }
+
+    // 2. Prioridade Média: Qualquer ADM sniper conectado que seja admin confirmado deste grupo
     const indices = mapaAdminGrupos.get(idGrupo);
     if (indices && indices.size > 0) {
         const adminsConectados = snipersAtivos.filter(s =>
@@ -520,7 +752,8 @@ function obterSnipersDisponiveis(idGrupo) {
         );
         if (adminsConectados.length > 0) return adminsConectados;
     }
-    // Fallback: qualquer ADM conectado e pronto com socket aberto
+
+    // 3. Fallback Seguro: Qualquer ADM sniper conectado e pronto com socket aberto
     return snipersAtivos.filter(s => s.conectado && s.sock?.ws?.isOpen);
 }
 
@@ -670,8 +903,12 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
     }
     fs.mkdirSync(pastaAuth, { recursive: true });
 
+    const meta = obterMetaSniper(indice);
     let estado = {
         indice,
+        id: indice,
+        campaignId: meta?.campaignId || null,
+        campaignName: meta?.campaignName || null,
         conectado: false,
         status: tipoConexao === 'codigo' ? 'solicitando_codigo' : 'gerando_qr',
         numero: null,
@@ -1475,9 +1712,11 @@ async function iniciarOperacaoAegisCompleta() {
     carregarCampanhasLocais();
     iniciarAgendamento12Horas();
 
-    console.log(`[+] Conectando frota de ${qtdAdms} Administradores...`);
-    for (let i = 1; i <= qtdAdms; i++) {
-        await conectarSniper(i);
+    const snipersCadastrados = carregarSnipersCampanhas();
+    console.log(`[+] Conectando frota de ${snipersCadastrados.length} Administradores Snipers distribuídos por campanha...`);
+    for (const s of snipersCadastrados) {
+        const idNum = Number(s.id || s.indice);
+        await conectarSniper(idNum);
     }
 
     if (snipersAtivos.length === 0) {
@@ -1523,6 +1762,11 @@ module.exports = {
     banirPermanente,
     desbanir,
     obterStatusAdms,
+    obterStatusAdmsPorCampanha,
+    adicionarSniperCampanha,
+    removerSniperCampanha,
+    carregarSnipersCampanhas,
+    conectarSniper,
     conectarAdmManual,
     desconectarAdm,
     // Aliases para compatibilidade total

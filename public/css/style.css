@@ -2426,4 +2426,162 @@ body {
     text-align: center;
 }
 
+/* =====================================================================
+   🎯 SEÇÕES DE CAMPANHAS DE ADMS SNIPERS (VIEW-ESPIOES)
+   ===================================================================== */
+.campanhas-adms-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.campanha-adms-block {
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    transition: all var(--transition-normal);
+}
+
+.campanha-adms-block:hover {
+    border-color: rgba(16, 185, 129, 0.25);
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.campanha-adms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.campanha-adms-title-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.campanha-adms-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.01em;
+}
+
+.campanha-adms-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-tag-campanha {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.badge-tag-campanha.badge-emerald {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.badge-tag-campanha.badge-cyan {
+    background: rgba(6, 182, 212, 0.15);
+    color: #38bdf8;
+    border-color: rgba(6, 182, 212, 0.35);
+}
+
+.badge-tag-campanha.badge-amber {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.campanha-adms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.campanha-adms-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-top: 1px dashed rgba(255, 255, 255, 0.06);
+    padding-top: 14px;
+}
+
+.btn-add-adm-campanha {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.25));
+    border: 1px solid rgba(16, 185, 129, 0.45);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-add-adm-campanha:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(6, 182, 212, 0.4));
+    border-color: rgba(16, 185, 129, 0.7);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-espiao-delete {
+    background: transparent;
+    border: 1px solid rgba(244, 63, 94, 0.25);
+    color: #fda4af;
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.btn-espiao-delete:hover {
+    background: rgba(244, 63, 94, 0.2);
+    border-color: rgba(244, 63, 94, 0.6);
+    color: #ffffff;
+}
+
+.empty-campanha-adms {
+    grid-column: 1 / -1;
+    padding: 22px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+}
+
 

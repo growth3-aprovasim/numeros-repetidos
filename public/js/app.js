@@ -420,11 +420,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 🕵️ MÓDULO 2: ESPIÕES DO WHATSAPP (QR CODE & CÓDIGO)
     // =================================================================
-    const espioesCardsContainer = document.getElementById('espioes-cards-container');
-    const inputQtdEspioesQuick = document.getElementById('input-quantidade-espioes-quick');
-    const btnQtyMinus = document.getElementById('btn-qty-minus');
-    const btnQtyPlus = document.getElementById('btn-qty-plus');
-    const btnSaveQtyQuick = document.getElementById('btn-save-qty-quick');
+    const espioesCampanhasContainer = document.getElementById('espioes-campanhas-container');
+    const inputSearchAdmsCampanhas = document.getElementById('input-search-adms-campanhas');
+    const admsSummaryText = document.getElementById('adms-summary-text');
     const btnForceConnectAll = document.getElementById('btn-force-connect-all');
 
     // Modais de Conexão
@@ -453,43 +451,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalDisconnectCancel = document.getElementById('modal-disconnect-cancel');
     const modalDisconnectConfirm = document.getElementById('modal-disconnect-confirm');
 
+    // Modal de Confirmação de Remoção de Sniper da Campanha
+    const modalDeleteSniper = document.getElementById('modal-delete-sniper');
+    const modalDeleteSniperMessage = document.getElementById('modal-delete-sniper-message');
+    const modalBtnCancelDeleteSniper = document.getElementById('modal-btn-cancel-delete-sniper');
+    const modalBtnConfirmDeleteSniper = document.getElementById('modal-btn-confirm-delete-sniper');
+
+    let cacheDadosAdmsPorCampanha = null;
+    let idSniperParaRemover = null;
+
     aplicarMascaraTelefone(inputCodePhone);
 
-    btnQtyMinus.addEventListener('click', () => {
-        let v = parseInt(inputQtdEspioesQuick.value) || 4;
-        if (v > 1) inputQtdEspioesQuick.value = v - 1;
-    });
-
-    btnQtyPlus.addEventListener('click', () => {
-        let v = parseInt(inputQtdEspioesQuick.value) || 4;
-        if (v < 20) inputQtdEspioesQuick.value = v + 1;
-    });
-
-    btnSaveQtyQuick.addEventListener('click', async () => {
-        const novaQtd = parseInt(inputQtdEspioesQuick.value) || 4;
-        btnSaveQtyQuick.disabled = true;
-        btnSaveQtyQuick.textContent = 'Salvando...';
-        try {
-            const res = await fetch('/api/config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quantidadeEspioes: novaQtd })
-            });
-            const data = await res.json();
-            if (data.sucesso) {
-                showToast(`Quantidade de ADMs definida para ${novaQtd}!`);
-                await carregarEspioes();
-                await carregarConfiguracoes();
-            } else {
-                showToast(data.erro || 'Erro ao alterar quantidade.', 'error');
+    // Filtro em tempo real de campanhas na aba de ADMs
+    if (inputSearchAdmsCampanhas) {
+        inputSearchAdmsCampanhas.addEventListener('input', (e) => {
+            const termo = e.target.value.trim().toLowerCase();
+            if (cacheDadosAdmsPorCampanha) {
+                renderizarCampanhasComAdms(cacheDadosAdmsPorCampanha.campanhas, cacheDadosAdmsPorCampanha.globais, termo);
             }
-        } catch (e) {
-            showToast('Erro de comunicação.', 'error');
-        } finally {
-            btnSaveQtyQuick.disabled = false;
-            btnSaveQtyQuick.textContent = '💾 Aplicar';
-        }
-    });
+        });
+    }
 
     btnForceConnectAll.addEventListener('click', async () => {
         btnForceConnectAll.disabled = true;
@@ -498,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/snipers/conectar', { method: 'POST' });
             const data = await res.json();
             if (data.sucesso) {
-                showToast('Comando de conexão enviado a todas as contas de ADM!');
+                showToast(data.mensagem || 'Comando de conexão enviado a todas as contas de ADM!');
                 setTimeout(() => carregarEspioes(), 2000);
             }
         } catch (e) {
@@ -511,159 +492,347 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarEspioes() {
         try {
-            const res = await fetch('/api/adms');
+            const res = await fetch('/api/adms/por-campanha');
             const data = await res.json();
             if (data.sucesso) {
-                listaEspioesCache = data.adms || data.espioes || [];
-                renderizarCardsEspioes(listaEspioesCache);
-                atualizarMetricasEspioes(data.conectados, data.total, listaEspioesCache);
+                cacheDadosAdmsPorCampanha = data;
+                listaEspioesCache = data.snipers || [];
+
+                atualizarMetricasEspioes(data.totalConectadosGeral, data.totalSnipersGeral, listaEspioesCache);
+                if (admsSummaryText) {
+                    admsSummaryText.textContent = `${data.totalCampanhas} Campanhas ativas | ${data.totalSnipersGeral} ADMs Snipers configurados (${data.totalConectadosGeral} online).`;
+                }
+
+                const termo = inputSearchAdmsCampanhas ? inputSearchAdmsCampanhas.value.trim().toLowerCase() : '';
+                renderizarCampanhasComAdms(data.campanhas, data.globais, termo);
 
                 // Se modal QR ou Código estiver aberto, atualiza estado do ADM ativo
                 if (modalQrAtivo && indiceEspiaoParaAcao) {
-                    const espAtivo = listaEspioesCache.find(x => x.indice === indiceEspiaoParaAcao);
+                    const espAtivo = listaEspioesCache.find(x => x.indice === indiceEspiaoParaAcao || x.id === indiceEspiaoParaAcao);
                     if (espAtivo) atualizarEstadoModalQr(espAtivo);
                 }
                 if (modalCodigoAtivo && indiceEspiaoParaAcao) {
-                    const espAtivo = listaEspioesCache.find(x => x.indice === indiceEspiaoParaAcao);
+                    const espAtivo = listaEspioesCache.find(x => x.indice === indiceEspiaoParaAcao || x.id === indiceEspiaoParaAcao);
                     if (espAtivo) atualizarEstadoModalCodigo(espAtivo);
                 }
             } else {
-                espioesCardsContainer.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1 / -1;">
-                        <span class="empty-icon">⚠️</span>
-                        <p class="empty-title">Erro ao carregar lista de ADMs</p>
-                        <p class="empty-subtitle">${escapeHtml(data.erro || 'Falha na resposta do servidor.')}</p>
-                    </div>
-                `;
+                if (espioesCampanhasContainer) {
+                    espioesCampanhasContainer.innerHTML = `
+                        <div class="empty-state">
+                            <span class="empty-icon">⚠️</span>
+                            <p class="empty-title">Erro ao carregar lista de ADMs por campanha</p>
+                            <p class="empty-subtitle">${escapeHtml(data.erro || 'Falha na resposta do servidor.')}</p>
+                        </div>
+                    `;
+                }
             }
         } catch (err) {
             console.error('[!] Erro ao carregar ADMs:', err);
-            espioesCardsContainer.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1;">
-                    <span class="empty-icon">⚠️</span>
-                    <p class="empty-title">Servidor não respondeu</p>
-                    <p class="empty-subtitle">Verifique se o backend está em execução na porta 3000.</p>
-                </div>
-            `;
+            if (espioesCampanhasContainer) {
+                espioesCampanhasContainer.innerHTML = `
+                    <div class="empty-state">
+                        <span class="empty-icon">⚠️</span>
+                        <p class="empty-title">Servidor não respondeu</p>
+                        <p class="empty-subtitle">Verifique se o backend está em execução na porta 3000.</p>
+                    </div>
+                `;
+            }
         }
     }
 
     function atualizarMetricasEspioes(conectados, total, lista) {
-        valEspioesStatus.textContent = `${conectados} / ${total}`;
-        navBadgeEspioes.textContent = `${conectados}/${total}`;
-        inputQtdEspioesQuick.value = total;
+        if (valEspioesStatus) valEspioesStatus.textContent = `${conectados} / ${total}`;
+        if (navBadgeEspioes) navBadgeEspioes.textContent = `${conectados}/${total}`;
 
-        // Renderiza dots de telemetria
-        espioesIndicatorsRow.innerHTML = '';
-        lista.forEach(e => {
-            const dot = document.createElement('span');
-            dot.className = `sniper-dot ${e.conectado ? 'active' : ''}`;
-            dot.textContent = e.indice < 10 ? `0${e.indice}` : `${e.indice}`;
-            dot.title = `ADM 0${e.indice}: ${e.conectado ? 'Conectado' : 'Desconectado'}`;
-            espioesIndicatorsRow.appendChild(dot);
-        });
+        if (espioesIndicatorsRow) {
+            espioesIndicatorsRow.innerHTML = '';
+            lista.forEach(e => {
+                const dot = document.createElement('span');
+                dot.className = `sniper-dot ${e.conectado ? 'active' : ''}`;
+                const idx = e.id || e.indice;
+                dot.textContent = idx < 10 ? `0${idx}` : `${idx}`;
+                dot.title = `ADM 0${idx} (${e.campaignName || 'Global'}): ${e.conectado ? 'Conectado' : 'Desconectado'}`;
+                espioesIndicatorsRow.appendChild(dot);
+            });
+        }
     }
 
-    function renderizarCardsEspioes(espioes) {
-        if (!espioes || espioes.length === 0) {
-            espioesCardsContainer.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1;">
-                    <span class="empty-icon">🛡️</span>
-                    <p class="empty-title">Nenhuma conta de ADM configurada</p>
-                    <p class="empty-subtitle">Ajuste a quantidade acima para adicionar instâncias de ADMs.</p>
+    function criarCardSniperHtml(esp, campaignName) {
+        const idSniper = esp.id || esp.indice;
+        const ehConectado = esp.conectado;
+        const statusClass = ehConectado ? 'connected' : (esp.status === 'qr_pronto' || esp.status === 'codigo_pronto' ? 'waiting' : 'disconnected');
+
+        let statusPillTexto = '⚪ DESCONECTADO';
+        if (ehConectado) statusPillTexto = '🟢 CONECTADO';
+        else if (esp.status === 'qr_pronto') statusPillTexto = '🟡 QR PRONTO';
+        else if (esp.status === 'codigo_pronto') statusPillTexto = '🟡 CÓDIGO GERADO';
+        else if (esp.status === 'solicitando_codigo' || esp.status === 'gerando_qr') statusPillTexto = '⏳ AGUARDANDO...';
+
+        const phoneDisplayHtml = ehConectado
+            ? `
+                <div class="espiao-phone-display">
+                    <span class="espiao-phone-icon">📱</span>
+                    <span class="espiao-phone-text">${escapeHtml(esp.numeroFormatado || '+' + esp.numero)}</span>
+                </div>
+            `
+            : `
+                <div class="espiao-phone-display" style="opacity: 0.6;">
+                    <span class="espiao-phone-icon">⚪</span>
+                    <span class="espiao-phone-text">Nenhum chip conectado</span>
                 </div>
             `;
-            return;
-        }
 
-        espioesCardsContainer.innerHTML = '';
-        espioes.forEach(esp => {
-            const card = document.createElement('div');
-            const ehConectado = esp.conectado;
-            const statusClass = ehConectado ? 'connected' : (esp.status === 'qr_pronto' || esp.status === 'codigo_pronto' ? 'waiting' : 'disconnected');
-            card.className = `espiao-card ${statusClass}`;
-            card.id = `espiao-card-${esp.indice}`;
-
-            let statusPillTexto = '⚪ DESCONECTADO';
-            if (ehConectado) statusPillTexto = '🟢 CONECTADO';
-            else if (esp.status === 'qr_pronto') statusPillTexto = '🟡 QR PRONTO';
-            else if (esp.status === 'codigo_pronto') statusPillTexto = '🟡 CÓDIGO GERADO';
-            else if (esp.status === 'solicitando_codigo' || esp.status === 'gerando_qr') statusPillTexto = '⏳ AGUARDANDO...';
-
-            const phoneDisplayHtml = ehConectado
-                ? `
-                    <div class="espiao-phone-display">
-                        <span class="espiao-phone-icon">📱</span>
-                        <span class="espiao-phone-text">${escapeHtml(esp.numeroFormatado || '+' + esp.numero)}</span>
-                    </div>
-                `
-                : `
-                    <div class="espiao-phone-display" style="opacity: 0.6;">
-                        <span class="espiao-phone-icon">⚪</span>
-                        <span class="espiao-phone-text">Nenhum chip conectado</span>
-                    </div>
-                `;
-
-            const actionsHtml = ehConectado
-                ? `
-                    <button class="btn-espiao-disconnect" data-indice="${esp.indice}" title="Desconectar esta conta de ADM">
-                        🔌 Desconectar ADM
+        const actionsHtml = ehConectado
+            ? `
+                <button class="btn-espiao-disconnect" data-indice="${idSniper}" title="Desconectar este chip">
+                    🔌 Desconectar Chip
+                </button>
+            `
+            : `
+                <div class="espiao-action-btn-group">
+                    <button class="btn-espiao-connect btn-open-qr" data-indice="${idSniper}" data-campanha="${escapeHtml(campaignName)}">
+                        <span>📷</span> Ler QR Code
                     </button>
-                `
-                : `
-                    <div class="espiao-action-btn-group">
-                        <button class="btn-espiao-connect btn-open-qr" data-indice="${esp.indice}">
-                            <span>📷</span> Ler QR Code
-                        </button>
-                        <button class="btn-espiao-connect btn-open-code" data-indice="${esp.indice}">
-                            <span>🔢</span> Via Código
-                        </button>
-                    </div>
-                `;
+                    <button class="btn-espiao-connect btn-open-code" data-indice="${idSniper}" data-campanha="${escapeHtml(campaignName)}">
+                        <span>🔢</span> Via Código
+                    </button>
+                </div>
+            `;
 
-            card.innerHTML = `
+        return `
+            <div class="espiao-card ${statusClass}" id="espiao-card-${idSniper}">
                 <div class="espiao-card-header">
                     <span class="espiao-tag-title">
-                        <span>🛡️</span> ADM #${esp.indice < 10 ? '0' + esp.indice : esp.indice}
+                        <span>🛡️</span> ADM #${idSniper < 10 ? '0' + idSniper : idSniper}
                     </span>
                     <span class="status-pill-espiao ${statusClass}">${statusPillTexto}</span>
                 </div>
                 <div class="espiao-card-body">
                     ${phoneDisplayHtml}
                     ${actionsHtml}
+                    <button class="btn-espiao-delete" data-id="${idSniper}" data-campanha="${escapeHtml(campaignName)}" title="Remover permanentemente este ADM desta campanha">
+                        <span>🗑️</span> Remover ADM
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderizarCampanhasComAdms(campanhas, globais, termoFiltro = '') {
+        if (!espioesCampanhasContainer) return;
+
+        let listaFiltrada = campanhas || [];
+        if (termoFiltro) {
+            listaFiltrada = listaFiltrada.filter(c =>
+                c.name.toLowerCase().includes(termoFiltro) ||
+                c.id.toLowerCase().includes(termoFiltro)
+            );
+        }
+
+        if (listaFiltrada.length === 0 && (!globais || globais.length === 0)) {
+            espioesCampanhasContainer.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">🔍</span>
+                    <p class="empty-title">Nenhuma campanha encontrada</p>
+                    <p class="empty-subtitle">${termoFiltro ? 'Nenhum resultado corresponde ao termo digitado.' : 'Sincronize as campanhas na aba SendFlow.'}</p>
                 </div>
             `;
-            espioesCardsContainer.appendChild(card);
+            return;
+        }
+
+        let html = '';
+
+        // Renderiza cada campanha ativa do SendFlow
+        listaFiltrada.forEach(camp => {
+            const snipers = camp.snipers || [];
+            const onlineCount = camp.conectados || 0;
+            const totalCount = snipers.length;
+            const badgeClass = onlineCount > 0 ? 'badge-emerald' : 'badge-amber';
+
+            let cardsHtml = '';
+            if (snipers.length === 0) {
+                cardsHtml = `
+                    <div class="empty-campanha-adms">
+                        ℹ️ Nenhum ADM Sniper cadastrado para a campanha <strong>${escapeHtml(camp.name)}</strong> ainda. Clique no botão abaixo para adicionar.
+                    </div>
+                `;
+            } else {
+                cardsHtml = snipers.map(s => criarCardSniperHtml(s, camp.name)).join('');
+            }
+
+            html += `
+                <div class="campanha-adms-block" id="campanha-block-${camp.id}">
+                    <div class="campanha-adms-header">
+                        <div class="campanha-adms-title-group">
+                            <h3 class="campanha-adms-title">
+                                <span>🚀</span> ${escapeHtml(camp.name)}
+                            </h3>
+                            <div class="campanha-adms-badges">
+                                <span class="badge-tag-campanha badge-cyan">ID: ${camp.id}</span>
+                                <span class="badge-tag-campanha">${camp.totalGrupos} Grupos</span>
+                                <span class="badge-tag-campanha ${badgeClass}">
+                                    ${onlineCount}/${totalCount} ADMs Conectados
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="campanha-adms-grid">
+                        ${cardsHtml}
+                    </div>
+
+                    <div class="campanha-adms-footer">
+                        <button class="btn-add-adm-campanha" data-campaign-id="${camp.id}" data-campaign-name="${escapeHtml(camp.name)}">
+                            <span class="btn-icon">➕</span>
+                            <span class="btn-text">Adicionar ADM Sniper nesta Campanha</span>
+                        </button>
+                    </div>
+                </div>
+            `;
         });
 
-        // Eventos dos cards de espiões
-        document.querySelectorAll('.btn-open-qr').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = Number(e.currentTarget.dataset.indice);
-                abrirModalQr(idx);
+        // Seção para ADMs globais / sem campanha associada (se houver)
+        if (globais && globais.length > 0 && (!termoFiltro || 'globais'.includes(termoFiltro))) {
+            const onlineCount = globais.filter(g => g.conectado).length;
+            const cardsHtml = globais.map(s => criarCardSniperHtml(s, 'Global / Sem Campanha')).join('');
+
+            html += `
+                <div class="campanha-adms-block" style="border-color: rgba(245, 158, 11, 0.35);">
+                    <div class="campanha-adms-header">
+                        <div class="campanha-adms-title-group">
+                            <h3 class="campanha-adms-title">
+                                <span>🌐</span> ADMs Globais / Sem Campanha Vinculada
+                            </h3>
+                            <div class="campanha-adms-badges">
+                                <span class="badge-tag-campanha badge-amber">${onlineCount}/${globais.length} Conectados</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="campanha-adms-grid">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        espioesCampanhasContainer.innerHTML = html;
+
+        // VINCULAR EVENTOS
+        // 1. Botão Adicionar ADM Sniper nesta Campanha
+        espioesCampanhasContainer.querySelectorAll('.btn-add-adm-campanha').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const targetBtn = e.currentTarget;
+                const campaignId = targetBtn.dataset.campaignId;
+                const campaignName = targetBtn.dataset.campaignName;
+
+                targetBtn.disabled = true;
+                targetBtn.innerHTML = '<span class="spinner"></span> Adicionando...';
+
+                try {
+                    const res = await fetch(`/api/adms/campanha/${campaignId}/novo`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ campaignName })
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || `Novo ADM Sniper criado para "${campaignName}"!`);
+                        await carregarEspioes();
+                    } else {
+                        showToast(data.erro || 'Erro ao adicionar ADM.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Erro de comunicação.', 'error');
+                } finally {
+                    targetBtn.disabled = false;
+                    targetBtn.innerHTML = '<span class="btn-icon">➕</span><span class="btn-text">Adicionar ADM Sniper nesta Campanha</span>';
+                }
             });
         });
 
-        document.querySelectorAll('.btn-open-code').forEach(btn => {
+        // 2. Botão Ler QR Code
+        espioesCampanhasContainer.querySelectorAll('.btn-open-qr').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const idx = Number(e.currentTarget.dataset.indice);
-                abrirModalCodigo(idx);
+                const campName = e.currentTarget.dataset.campanha || '';
+                abrirModalQr(idx, campName);
             });
         });
 
-        document.querySelectorAll('.btn-espiao-disconnect').forEach(btn => {
+        // 3. Botão Via Código
+        espioesCampanhasContainer.querySelectorAll('.btn-open-code').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = Number(e.currentTarget.dataset.indice);
+                const campName = e.currentTarget.dataset.campanha || '';
+                abrirModalCodigo(idx, campName);
+            });
+        });
+
+        // 4. Botão Desconectar
+        espioesCampanhasContainer.querySelectorAll('.btn-espiao-disconnect').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const idx = Number(e.currentTarget.dataset.indice);
                 abrirModalConfirmDisconnect(idx);
             });
         });
+
+        // 5. Botão Remover ADM Permanentemente da Campanha
+        espioesCampanhasContainer.querySelectorAll('.btn-espiao-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = Number(e.currentTarget.dataset.id);
+                const campName = e.currentTarget.dataset.campanha || 'Campanha';
+                abrirModalConfirmDeleteSniper(id, campName);
+            });
+        });
+    }
+
+    // Modal de Confirmação de Remoção de Sniper
+    function abrirModalConfirmDeleteSniper(id, campName) {
+        idSniperParaRemover = id;
+        if (modalDeleteSniperMessage) {
+            modalDeleteSniperMessage.innerHTML = `Tem certeza que deseja remover o <strong>ADM Sniper #0${id}</strong> da campanha <strong>"${escapeHtml(campName)}"</strong>?<br><br>As credenciais salvas serão excluídas e o chip desconectado. Os ADMs das outras campanhas continuarão funcionando sem alterações.`;
+        }
+        if (modalDeleteSniper) modalDeleteSniper.style.display = 'flex';
+    }
+
+    if (modalBtnCancelDeleteSniper) {
+        modalBtnCancelDeleteSniper.addEventListener('click', () => {
+            if (modalDeleteSniper) modalDeleteSniper.style.display = 'none';
+            idSniperParaRemover = null;
+        });
+    }
+
+    if (modalBtnConfirmDeleteSniper) {
+        modalBtnConfirmDeleteSniper.addEventListener('click', async () => {
+            if (!idSniperParaRemover) return;
+            modalBtnConfirmDeleteSniper.disabled = true;
+            modalBtnConfirmDeleteSniper.textContent = 'Removendo...';
+
+            try {
+                const res = await fetch(`/api/adms/${idSniperParaRemover}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.sucesso) {
+                    showToast(data.mensagem || 'ADM Sniper removido com sucesso!');
+                    if (modalDeleteSniper) modalDeleteSniper.style.display = 'none';
+                    idSniperParaRemover = null;
+                    await carregarEspioes();
+                } else {
+                    showToast(data.erro || 'Erro ao remover ADM.', 'error');
+                }
+            } catch (err) {
+                showToast('Erro de comunicação.', 'error');
+            } finally {
+                modalBtnConfirmDeleteSniper.disabled = false;
+                modalBtnConfirmDeleteSniper.textContent = 'Sim, Remover ADM';
+            }
+        });
     }
 
     // Modal QR Code Flow
-    async function abrirModalQr(indice) {
+    async function abrirModalQr(indice, campName = '') {
         indiceEspiaoParaAcao = indice;
         modalQrAtivo = true;
-        modalQrTitle.textContent = `Conectar ADM #0${indice} via QR Code`;
+        modalQrTitle.textContent = campName ? `Conectar ADM #0${indice} [${campName}] via QR Code` : `Conectar ADM #0${indice} via QR Code`;
         modalQrStatusPill.textContent = 'Gerando QR Code...';
         modalQrStatusPill.className = 'status-pill-espiao waiting';
         modalQrImgWrap.innerHTML = `
@@ -731,10 +900,10 @@ document.addEventListener('DOMContentLoaded', () => {
     modalQrBtnCancel.addEventListener('click', fecharModalQr);
 
     // Modal Código de Pareamento Flow
-    function abrirModalCodigo(indice) {
+    function abrirModalCodigo(indice, campName = '') {
         indiceEspiaoParaAcao = indice;
         modalCodigoAtivo = true;
-        modalCodeTitle.textContent = `Conectar ADM #0${indice} via Código`;
+        modalCodeTitle.textContent = campName ? `Conectar ADM #0${indice} [${campName}] via Código` : `Conectar ADM #0${indice} via Código`;
         inputCodePhone.value = '';
         codeStepInput.style.display = 'block';
         codeStepDisplay.style.display = 'none';
