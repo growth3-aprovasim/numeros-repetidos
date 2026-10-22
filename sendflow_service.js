@@ -76,13 +76,22 @@ function normalizarID(num) {
 }
 
 function obterApiKey() {
-    return process.env.SENDFLOW_API_KEY || DEFAULT_API_KEY;
+    return (process.env.SENDFLOW_API_KEY || '').trim();
 }
 
 // Requisição HTTP genérica para o SendFlow
 function requestSendflow(caminho) {
     return new Promise((resolve) => {
         const apiKey = obterApiKey();
+        if (!apiKey) {
+            console.error('[⚠️ SENDFLOW] Chave SENDFLOW_API_KEY não foi encontrada nas variáveis de ambiente (.env ou Easypanel).');
+            resolve({
+                statusCode: 401,
+                data: { message: 'SENDFLOW_API_KEY não configurada' },
+                raw: '{"message":"SENDFLOW_API_KEY não configurada"}'
+            });
+            return;
+        }
         const urlStr = BASE_URL + caminho;
         const u = new URL(urlStr);
 
