@@ -472,15 +472,6 @@ function removerGrupoCampanha(releaseId, idOuGid) {
         total: camp.grupos.length
     };
 }
-        statusSincronizacao.emAndamento = false;
-        console.error('[!] Erro interno ao sincronizar SendFlow:', err);
-        return {
-            sucesso: false,
-            mensagem: statusSincronizacao.mensagem,
-            campanhas: cacheCampanhas.campanhas
-        };
-    }
-}
 
 // Inicia agendamento recorrente de 12 horas
 function iniciarAgendamento12Horas(onAtualizacao) {
