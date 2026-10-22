@@ -668,7 +668,18 @@ function obterInfoGrupoCampanha(idGrupo, subject) {
             const tagMatch = campName.match(/\[(.*?)\]/);
             if (tagMatch && tagMatch[1]) {
                 const tagInterna = tagMatch[1].trim().toLowerCase();
-                if (tagInterna.length >= 3 && nomeGrupoLower.includes(tagInterna)) {
+                // Bate a tag inteira (ex: "pi-nov-26") ou versão sem sufixo de ano (ex: "pi-nov")
+                if (tagInterna.length >= 3 && (nomeGrupoLower.includes(tagInterna) || nomeGrupoLower.includes(tagInterna.replace(/-26$/, '')))) {
+                    return {
+                        releaseId: camp.id,
+                        nomeCampanha: camp.name,
+                        idGrupo: idLimpo,
+                        nomeGrupo: nomeLimpo,
+                        campanhaObj: camp
+                    };
+                }
+                const partesTag = tagInterna.split('-').filter(p => p.length >= 2 && p !== '26');
+                if (partesTag.length > 0 && partesTag.every(p => nomeGrupoLower.includes(p))) {
                     return {
                         releaseId: camp.id,
                         nomeCampanha: camp.name,
@@ -679,35 +690,50 @@ function obterInfoGrupoCampanha(idGrupo, subject) {
                 }
             }
 
-            // 3.2. Regras personalizadas para campanhas clássicas
-            if (campNameLower.includes('black') || campNameLower.includes('vitalícia') || campNameLower.includes('vitalicia')) {
-                if (/black|vital[ií]cia/i.test(nomeLimpo)) {
-                    return {
-                        releaseId: camp.id,
-                        nomeCampanha: camp.name,
-                        idGrupo: idLimpo,
-                        nomeGrupo: nomeLimpo,
-                        campanhaObj: camp
-                    };
-                }
+            // 3.2. Regras personalizadas para campanhas clássicas e ativas
+            if (/inss/i.test(campNameLower) && /inss/i.test(nomeGrupoLower)) {
+                return {
+                    releaseId: camp.id,
+                    nomeCampanha: camp.name,
+                    idGrupo: idLimpo,
+                    nomeGrupo: nomeLimpo,
+                    campanhaObj: camp
+                };
             }
-            if (campNameLower.includes('base forte')) {
-                if (/base\s*forte/i.test(nomeLimpo)) {
-                    return {
-                        releaseId: camp.id,
-                        nomeCampanha: camp.name,
-                        idGrupo: idLimpo,
-                        nomeGrupo: nomeLimpo,
-                        campanhaObj: camp
-                    };
-                }
+            if ((campNameLower.includes('black') || campNameLower.includes('vitalícia') || campNameLower.includes('vitalicia')) &&
+                /black|vital[ií]cia/i.test(nomeGrupoLower)) {
+                return {
+                    releaseId: camp.id,
+                    nomeCampanha: camp.name,
+                    idGrupo: idLimpo,
+                    nomeGrupo: nomeLimpo,
+                    campanhaObj: camp
+                };
+            }
+            if (campNameLower.includes('base forte') && /base\s*forte/i.test(nomeGrupoLower)) {
+                return {
+                    releaseId: camp.id,
+                    nomeCampanha: camp.name,
+                    idGrupo: idLimpo,
+                    nomeGrupo: nomeLimpo,
+                    campanhaObj: camp
+                };
+            }
+            if ((campNameLower.includes('tj-sp') || campNameLower.includes('tjsp')) && /tj-sp|tjsp|tribunal/i.test(nomeGrupoLower)) {
+                return {
+                    releaseId: camp.id,
+                    nomeCampanha: camp.name,
+                    idGrupo: idLimpo,
+                    nomeGrupo: nomeLimpo,
+                    campanhaObj: camp
+                };
             }
 
             // 3.3. Correspondência por tokens principais (ex: "inss", "tj-sp", "tjsp")
             const tokens = campNameLower
                 .replace(/[\[\]\(\)\-_]/g, ' ')
                 .split(/\s+/)
-                .filter(t => t.length >= 4 && !['grupo', 'whats', 'release', '2026', 'pos', 'edital', 'campanha', 'mensagens'].includes(t));
+                .filter(t => t.length >= 3 && !['grupo', 'whats', 'release', '2026', 'pos', 'edital', 'campanha', 'mensagens'].includes(t));
 
             for (const token of tokens) {
                 if (nomeGrupoLower.includes(token)) {

@@ -125,6 +125,25 @@ function salvarConfig(novaConfig) {
     return merged;
 }
 
+// Mapeamento dinâmico de grupos e presença para TODAS as campanhas ativas do SendFlow:
+const mapaGruposPorCampanha = new Map(); // idCampanha -> Map(idGrupo -> g)
+const mapaPresencaPorCampanha = new Map(); // idCampanha -> Map(idNorm -> Set(idGrupo))
+const mapaInfoCampanhas = new Map(); // idCampanha -> { id, name }
+
+function obterPresencaCampanha(idCampanha) {
+    if (!mapaPresencaPorCampanha.has(idCampanha)) {
+        mapaPresencaPorCampanha.set(idCampanha, new Map());
+    }
+    return mapaPresencaPorCampanha.get(idCampanha);
+}
+
+function obterGruposCampanha(idCampanha) {
+    if (!mapaGruposPorCampanha.has(idCampanha)) {
+        mapaGruposPorCampanha.set(idCampanha, new Map());
+    }
+    return mapaGruposPorCampanha.get(idCampanha);
+}
+
 function identificarCampanha(idOuSubject, subjectOpcional) {
     let idGrupo = null;
     let subject = null;
@@ -146,13 +165,30 @@ function identificarCampanha(idOuSubject, subjectOpcional) {
     }
 
     if (subject) {
+        if (/inss|pi-nov|pi\s*nov/i.test(subject)) return 'Mczvs7LRn3fLHyZzb3tu';
         if (/black|vital[ií]cia/i.test(subject)) return '1mVRQCG59lTdqDxWZn3n';
         if (/base\s*forte/i.test(subject)) return 'FeirPHs7jY1cgayuSles';
+        if (/tj-sp|tjsp|tribunal/i.test(subject)) return 'V0F5VLj4HlSVjQCnHeUN';
     }
     return null;
 }
 
 function obterInfoCompletaCampanha(idGrupo, subject) {
+    // 1. Verifica se já está mapeado em alguma campanha ativa na memória
+    if (idGrupo && mapaGruposPorCampanha.size > 0) {
+        for (const [idCamp, grps] of mapaGruposPorCampanha.entries()) {
+            if (grps.has(idGrupo)) {
+                const g = grps.get(idGrupo);
+                const infoExemplo = mapaInfoCampanhas.get(idCamp);
+                return {
+                    idCampanha: idCamp,
+                    nomeCampanha: infoExemplo?.name || idCamp,
+                    nomeGrupo: g?.subject || subject || idGrupo
+                };
+            }
+        }
+    }
+
     const info = obterInfoGrupoCampanha(idGrupo, subject);
     if (info) {
         return {
@@ -161,18 +197,34 @@ function obterInfoCompletaCampanha(idGrupo, subject) {
             nomeGrupo: info.nomeGrupo || subject || idGrupo
         };
     }
+
     if (subject) {
-        if (/black|vital[ií]cia/i.test(subject)) {
+        const subLower = subject.toLowerCase();
+        if (/inss|pi-nov|pi\s*nov/i.test(subLower)) {
+            return {
+                idCampanha: 'Mczvs7LRn3fLHyZzb3tu',
+                nomeCampanha: 'Projeto INSS [PI-NOV-26]',
+                nomeGrupo: subject
+            };
+        }
+        if (/black|vital[ií]cia/i.test(subLower)) {
             return {
                 idCampanha: '1mVRQCG59lTdqDxWZn3n',
                 nomeCampanha: 'Black Vitalícia [BV-26]',
                 nomeGrupo: subject
             };
         }
-        if (/base\s*forte/i.test(subject)) {
+        if (/base\s*forte/i.test(subLower)) {
             return {
                 idCampanha: 'FeirPHs7jY1cgayuSles',
                 nomeCampanha: 'Base Forte 2026',
+                nomeGrupo: subject
+            };
+        }
+        if (/tj-sp|tjsp|tribunal/i.test(subLower)) {
+            return {
+                idCampanha: 'V0F5VLj4HlSVjQCnHeUN',
+                nomeCampanha: 'Projeto TJ-SP Pós-Edital [PES-PPE-26]',
                 nomeGrupo: subject
             };
         }
@@ -331,7 +383,7 @@ function estaNaBlacklist(numOuJid) {
 // =====================================================================
 const snipersAtivos = [];
 const mapaAdminGrupos = new Map(); // idGrupo -> Set(indicesDosSnipers)
-let sentinelaRealtimeAtivo = false;
+let sentinelaRealtimeAtivo = true;
 const feedEventos = [];
 
 // Estado em RAM das contas de ADMs (para QR Code & Pairing Code via site)
@@ -660,25 +712,6 @@ function obterEstadoAegis() {
     };
 }
 
-// Mapeamento dinâmico de grupos e presença para TODAS as campanhas ativas do SendFlow:
-const mapaGruposPorCampanha = new Map(); // idCampanha -> Map(idGrupo -> g)
-const mapaPresencaPorCampanha = new Map(); // idCampanha -> Map(idNorm -> Set(idGrupo))
-const mapaInfoCampanhas = new Map(); // idCampanha -> { id, name }
-
-function obterPresencaCampanha(idCampanha) {
-    if (!mapaPresencaPorCampanha.has(idCampanha)) {
-        mapaPresencaPorCampanha.set(idCampanha, new Map());
-    }
-    return mapaPresencaPorCampanha.get(idCampanha);
-}
-
-function obterGruposCampanha(idCampanha) {
-    if (!mapaGruposPorCampanha.has(idCampanha)) {
-        mapaGruposPorCampanha.set(idCampanha, new Map());
-    }
-    return mapaGruposPorCampanha.get(idCampanha);
-}
-
 function calcularTotalGruposGeral(idNorm) {
     const todos = new Set();
     for (const mapaPresenca of mapaPresencaPorCampanha.values()) {
@@ -721,8 +754,19 @@ function obterNomeGrupo(idGrupo) {
 }
 
 function obterSnipersDisponiveis(idGrupo) {
+    let campaignId = null;
     const infoCampanha = obterInfoGrupoCampanha(idGrupo);
-    const campaignId = infoCampanha ? infoCampanha.releaseId : null;
+    if (infoCampanha && infoCampanha.releaseId) {
+        campaignId = infoCampanha.releaseId;
+    }
+    if (!campaignId) {
+        for (const [cId, grps] of mapaGruposPorCampanha.entries()) {
+            if (grps.has(idGrupo)) {
+                campaignId = cId;
+                break;
+            }
+        }
+    }
 
     // 1. Prioridade Máxima: ADMs Snipers vinculados EXCLUSIVAMENTE a esta campanha
     if (campaignId) {
@@ -756,6 +800,84 @@ function obterSnipersDisponiveis(idGrupo) {
     // 3. Fallback Seguro: Qualquer ADM sniper conectado e pronto com socket aberto
     return snipersAtivos.filter(s => s.conectado && s.sock?.ws?.isOpen);
 }
+
+// =====================================================================
+// 📋 AUTO-MAPEAMENTO DE GRUPOS E ADMS VIA WHATSAPP (INSTANTÂNEO & SEGURO)
+// =====================================================================
+async function mapearGruposDoSniper(sniperObj) {
+    if (!sniperObj || !sniperObj.sock) return;
+    try {
+        const indice = sniperObj.indice;
+        const metaSniper = obterMetaSniper(indice);
+        const campaignId = metaSniper?.campaignId || null;
+        const campaignName = metaSniper?.campaignName || 'Campanha Desconhecida';
+
+        console.log(`[🔍 ADM 0${indice}] Mapeando grupos diretamente via WhatsApp...`);
+        const allGroups = await sniperObj.sock.groupFetchAllParticipating();
+        const groupIds = Object.keys(allGroups);
+        console.log(`[📋 ADM 0${indice}] Encontrados ${groupIds.length} grupos no chip.`);
+
+        let gruposMapeados = 0;
+        const meuNum = extrairNumeroLimpo(sniperObj.sock.user?.id);
+
+        for (const gid of groupIds) {
+            const g = allGroups[gid];
+            let idCamp = campaignId;
+            let nomeCamp = campaignName;
+
+            const infoCamp = obterInfoCompletaCampanha(gid, g.subject);
+            if (infoCamp && infoCamp.idCampanha) {
+                idCamp = infoCamp.idCampanha;
+                nomeCamp = infoCamp.nomeCampanha;
+            } else if (!idCamp) {
+                idCamp = 'GLOBAL';
+                nomeCamp = 'Geral';
+            }
+
+            if (idCamp && !mapaInfoCampanhas.has(idCamp)) {
+                mapaInfoCampanhas.set(idCamp, { id: idCamp, name: nomeCamp });
+            }
+
+            const mapaGrupos = obterGruposCampanha(idCamp);
+            mapaGrupos.set(gid, g);
+            gruposMapeados++;
+
+            const mapaPresenca = obterPresencaCampanha(idCamp);
+            for (const p of (g.participants || [])) {
+                if (p.lid && p.jid) mapaLidParaTelefone.set(extrairNumeroLimpo(p.lid), extrairNumeroLimpo(p.jid));
+                if (p.lid && p.id && p.id.includes('@s.whatsapp.net')) mapaLidParaTelefone.set(extrairNumeroLimpo(p.lid), extrairNumeroLimpo(p.id));
+                if (p.id && p.jid && p.id.includes('@lid')) mapaLidParaTelefone.set(extrairNumeroLimpo(p.id), extrairNumeroLimpo(p.jid));
+
+                const pNum = extrairNumeroParticipante(p);
+                if (pNum) {
+                    const idN = normalizarID(pNum);
+                    if (p.admin === 'admin' || p.admin === 'superadmin') {
+                        adminsGlobais.add(pNum);
+                        adminsGlobais.add(idN);
+                    }
+                    if (!mapaPresenca.has(idN)) mapaPresenca.set(idN, new Set());
+                    mapaPresenca.get(idN).add(gid);
+                }
+            }
+
+            const eu = g.participants?.find(p => {
+                const pNum = extrairNumeroParticipante(p);
+                return meuNum && pNum && (meuNum === pNum || normalizarID(meuNum) === normalizarID(pNum));
+            });
+
+            if (eu && (eu.admin === 'admin' || eu.admin === 'superadmin')) {
+                if (!mapaAdminGrupos.has(gid)) mapaAdminGrupos.set(gid, new Set());
+                mapaAdminGrupos.get(gid).add(indice);
+            }
+        }
+
+        console.log(`[✅ ADM 0${indice}] ${gruposMapeados} grupos sincronizados e catalogados com sucesso! Campanha: ${campaignName}`);
+        adicionarEventoFeed('ADM', `✅ ADM 0${indice}: ${gruposMapeados} grupos sincronizados (${campaignName})`);
+    } catch (err) {
+        console.error(`[!] Erro ao mapear grupos do ADM 0${sniperObj.indice}:`, err.message);
+    }
+}
+
 
 // Conexão autônoma de ADM via pasta existente
 async function conectarSniper(indice) {
@@ -828,9 +950,9 @@ async function conectarSniper(indice) {
                         atualizadoEm: Date.now()
                     });
 
-                    if (sentinelaRealtimeAtivo) {
-                        vincularListenersRealtime(sniperObj);
-                    }
+                    sentinelaRealtimeAtivo = true;
+                    vincularListenersRealtime(sniperObj);
+                    mapearGruposDoSniper(sniperObj).catch(() => {});
 
                     if (!resolvido) {
                         resolvido = true;
@@ -1001,9 +1123,9 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
                 sniperObj.conectado = true;
             }
 
-            if (sentinelaRealtimeAtivo) {
-                vincularListenersRealtime(sniperObj);
-            }
+            sentinelaRealtimeAtivo = true;
+            vincularListenersRealtime(sniperObj);
+            mapearGruposDoSniper(sniperObj).catch(() => {});
         }
 
         // 3. FECHADO (RECONEXÃO AUTOMÁTICA PÓS-PAREAMENTO)
@@ -1526,6 +1648,10 @@ async function processarFilaKicksRealtime() {
 // 🛑 FASE 2: CATRACA SENTINELA 24/7 (TODAS AS CAMPANHAS ATIVAS DO SENDFLOW)
 // =====================================================================
 function vincularListenersRealtime(sniper) {
+    if (!sniper || !sniper.sock) return;
+    if (sniper.listenerVinculado) return;
+    sniper.listenerVinculado = true;
+
     sniper.sock.ev.on('group-participants.update', async (evento) => {
         if (evento.action !== 'add') return;
 
@@ -1547,8 +1673,28 @@ function vincularListenersRealtime(sniper) {
             nomeGrupo = infoCamp.nomeGrupo || idGrupo;
         }
 
-        // Se o grupo não pertence a nenhuma das campanhas ativas do SendFlow, não monitora
-        if (!infoCamp) return;
+        // Se ainda não identificou pelo cache, herda a campanha do próprio sniper que recebeu o evento
+        const metaSniper = obterMetaSniper(sniper.indice);
+        if (!infoCamp && metaSniper && metaSniper.campaignId) {
+            infoCamp = {
+                idCampanha: metaSniper.campaignId,
+                nomeCampanha: metaSniper.campaignName || 'Campanha do Sniper',
+                nomeGrupo: nomeGrupo
+            };
+            const mapaGrupos = obterGruposCampanha(infoCamp.idCampanha);
+            if (!mapaGrupos.has(idGrupo)) {
+                mapaGrupos.set(idGrupo, { id: idGrupo, subject: nomeGrupo });
+            }
+        }
+
+        // Se ainda assim for nulo, monitora em monitoramento geral
+        if (!infoCamp) {
+            infoCamp = {
+                idCampanha: 'GLOBAL',
+                nomeCampanha: 'Campanha Geral',
+                nomeGrupo: nomeGrupo
+            };
+        }
 
         const idCampanha = infoCamp.idCampanha;
         const tagCampanha = infoCamp.nomeCampanha;
@@ -1668,9 +1814,10 @@ function vincularListenersRealtime(sniper) {
             }
 
             // ⚖️ REGRA 4: SATURAÇÃO NORMAL NA MESMA CAMPANHA (> limiteMax)
+            // REMOVE APENAS O GRUPO DUPLICADO (o grupo excedente idGrupo onde o lead acabou de entrar)
             if (gruposDoLead.size > limiteMax) {
-                console.log(`\n🚨 [ALERTA CATRACA - ${tagCampanha}] Lead ${numReal} violou a regra de saturação! (${gruposDoLead.size}/${limiteMax} permitidos)`);
-                adicionarEventoFeed('ALERTA', `🚨 Saturação! Lead ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size}/${limiteMax} grupos em ${tagCampanha}. Grupo: "${nomeGrupo}"`);
+                console.log(`\n🚨 [ALERTA CATRACA - DUPLICADO] Lead ${numReal} violou a regra de saturação! (${gruposDoLead.size}/${limiteMax} permitidos em ${tagCampanha}). EXPULSANDO APENAS DO GRUPO DUPLICADO: "${nomeGrupo}"...`);
+                adicionarEventoFeed('ALERTA', `🚨 Duplicado! Lead ${formatarExibicao(numReal)} excedeu o limite de grupos (${gruposDoLead.size}/${limiteMax}) em ${tagCampanha}. Expulsando apenas do grupo extra: "${nomeGrupo}"`);
 
                 enfileirarKickRealtime({
                     idGrupo,
