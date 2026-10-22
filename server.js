@@ -3,6 +3,7 @@
 // Servidor unificado para Easypanel / Docker / Nuvem
 // Painel Web: Whitelist + Gestão de Espiões (QR & Código) + Blacklist + Limites
 // =====================================================================
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -26,6 +27,15 @@ const {
     conectarEspiaoManual,
     desconectarEspiao
 } = require('./operacao_black_aegis');
+
+const {
+    sincronizarCampanhasSendflow,
+    obterDadosCompletosCampanhas,
+    adicionarAdmCampanha,
+    removerAdmCampanha,
+    importarAdminsDoSendflow,
+    getStatusSincronizacao
+} = require('./sendflow_service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -454,6 +464,84 @@ app.delete('/api/whitelist/:numero', (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// =====================================================================
+// 🎯 ROTAS DO SENDFLOW & GESTÃO DE ADMS POR CAMPANHA
+// =====================================================================
+
+// Obter dados completos de todas as campanhas ativas, grupos e ADMs configurados
+app.get('/api/sendflow/campanhas', (req, res) => {
+    try {
+        const dados = obterDadosCompletosCampanhas();
+        res.json({
+            sucesso: true,
+            ...dados
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Forçar sincronização imediata com a API do Sendflow
+app.post('/api/sendflow/sincronizar', async (req, res) => {
+    try {
+        console.log('[🔄] Disparo manual de sincronização do SendFlow solicitado pelo Painel Web...');
+        const resultado = await sincronizarCampanhasSendflow(true);
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Status da sincronização do Sendflow
+app.get('/api/sendflow/status', (req, res) => {
+    try {
+        const status = getStatusSincronizacao();
+        res.json({ sucesso: true, status });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Adicionar ADM a uma campanha específica
+app.post('/api/sendflow/campanhas/:releaseId/adms', (req, res) => {
+    try {
+        const { releaseId } = req.params;
+        const { numero, nome } = req.body;
+        if (!numero) {
+            return res.status(400).json({ sucesso: false, erro: 'Número de WhatsApp do ADM é obrigatório.' });
+        }
+        const resultado = adicionarAdmCampanha(releaseId, { numero, nome });
+        res.json(resultado);
+    } catch (err) {
+        res.status(400).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Remover ADM de uma campanha específica
+app.delete('/api/sendflow/campanhas/:releaseId/adms/:numero', (req, res) => {
+    try {
+        const { releaseId, numero } = req.params;
+        const resultado = removerAdmCampanha(releaseId, numero);
+        if (!resultado.sucesso) {
+            return res.status(404).json(resultado);
+        }
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Importar automaticamente os administradores detectados pelo SendFlow para a campanha
+app.post('/api/sendflow/campanhas/:releaseId/importar-adms', (req, res) => {
+    try {
+        const { releaseId } = req.params;
+        const resultado = importarAdminsDoSendflow(releaseId);
+        res.json(resultado);
+    } catch (err) {
+        res.status(400).json({ sucesso: false, erro: err.message });
     }
 });
 

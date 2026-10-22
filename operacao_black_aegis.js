@@ -5,6 +5,7 @@
 // 2. Sentinela Catraca em Tempo Real 24/7 (Saturação configurável + Ban Permanente)
 // 3. Gestão Centralizada de Administradores / ADMs (QR Code & Pairing Code via Web)
 // =====================================================================
+require('dotenv').config();
 const {
     default: makeWASocket,
     useMultiFileAuthState,
@@ -17,6 +18,16 @@ const pino = require('pino');
 const fs = require('fs');
 const path = require('path');
 const qrcode = require('qrcode');
+
+const {
+    carregarCampanhasLocais,
+    sincronizarCampanhasSendflow,
+    iniciarAgendamento12Horas,
+    obterInfoGrupoCampanha,
+    ehAdmDaCampanha,
+    obterDadosCompletosCampanhas,
+    getCacheCampanhas
+} = require('./sendflow_service');
 
 // =====================================================================
 // 🤫 SILENCIADOR DE RUÍDOS DE PROTOCOLO SIGNAL/BAILEYS
@@ -113,10 +124,58 @@ function salvarConfig(novaConfig) {
     return merged;
 }
 
-function identificarCampanha(subject) {
-    if (!subject) return null;
-    if (/black|vital[ií]cia/i.test(subject)) return 'BLACK_VITALICIA';
-    if (/base\s*forte/i.test(subject)) return 'BASE_FORTE';
+function identificarCampanha(idOuSubject, subjectOpcional) {
+    let idGrupo = null;
+    let subject = null;
+
+    if (subjectOpcional !== undefined) {
+        idGrupo = idOuSubject;
+        subject = subjectOpcional;
+    } else {
+        if (String(idOuSubject || '').includes('@g.us')) {
+            idGrupo = idOuSubject;
+        } else {
+            subject = idOuSubject;
+        }
+    }
+
+    const info = obterInfoGrupoCampanha(idGrupo, subject);
+    if (info) {
+        return info.releaseId;
+    }
+
+    if (subject) {
+        if (/black|vital[ií]cia/i.test(subject)) return '1mVRQCG59lTdqDxWZn3n';
+        if (/base\s*forte/i.test(subject)) return 'FeirPHs7jY1cgayuSles';
+    }
+    return null;
+}
+
+function obterInfoCompletaCampanha(idGrupo, subject) {
+    const info = obterInfoGrupoCampanha(idGrupo, subject);
+    if (info) {
+        return {
+            idCampanha: info.releaseId,
+            nomeCampanha: info.nomeCampanha,
+            nomeGrupo: info.nomeGrupo || subject || idGrupo
+        };
+    }
+    if (subject) {
+        if (/black|vital[ií]cia/i.test(subject)) {
+            return {
+                idCampanha: '1mVRQCG59lTdqDxWZn3n',
+                nomeCampanha: 'Black Vitalícia [BV-26]',
+                nomeGrupo: subject
+            };
+        }
+        if (/base\s*forte/i.test(subject)) {
+            return {
+                idCampanha: 'FeirPHs7jY1cgayuSles',
+                nomeCampanha: 'Base Forte 2026',
+                nomeGrupo: subject
+            };
+        }
+    }
     return null;
 }
 
@@ -372,12 +431,16 @@ function obterStatusAdms() {
 
 function obterEstadoAegis() {
     configAtual = carregarConfig();
+    const dadosSendflow = obterDadosCompletosCampanhas();
     return {
         snipers: obterStatusAdms(),
         adms: obterStatusAdms(),
         config: configAtual,
-        totalGruposBlack: gruposBlackOficiais.size,
-        totalGruposBaseForte: gruposBaseForteOficiais.size,
+        sendflow: dadosSendflow,
+        totalCampanhasAtivas: dadosSendflow.totalCampanhasAtivas,
+        totalGruposMonitorados: dadosSendflow.totalGrupos,
+        totalGruposBlack: (mapaGruposPorCampanha.get('1mVRQCG59lTdqDxWZn3n') || gruposBlackOficiais).size,
+        totalGruposBaseForte: (mapaGruposPorCampanha.get('FeirPHs7jY1cgayuSles') || gruposBaseForteOficiais).size,
         totalAdminsMapeados: adminsGlobais.size,
         totalWhitelist: cacheWhitelist.length,
         totalBlacklist: cacheBlacklist.length,
@@ -387,21 +450,63 @@ function obterEstadoAegis() {
     };
 }
 
-// Grupos catalogados por campanha:
-const gruposBlackOficiais = new Map();     // idGrupo -> { id, subject, creation }
-const gruposBaseForteOficiais = new Map(); // idGrupo -> { id, subject, creation }
+// Mapeamento dinâmico de grupos e presença para TODAS as campanhas ativas do SendFlow:
+const mapaGruposPorCampanha = new Map(); // idCampanha -> Map(idGrupo -> g)
+const mapaPresencaPorCampanha = new Map(); // idCampanha -> Map(idNorm -> Set(idGrupo))
+const mapaInfoCampanhas = new Map(); // idCampanha -> { id, name }
 
-// Presença em RAM por campanha:
-const presencaBlack = new Map();     // idNorm -> Set(idGrupo)
-const presencaBaseForte = new Map(); // idNorm -> Set(idGrupo)
+function obterPresencaCampanha(idCampanha) {
+    if (!mapaPresencaPorCampanha.has(idCampanha)) {
+        mapaPresencaPorCampanha.set(idCampanha, new Map());
+    }
+    return mapaPresencaPorCampanha.get(idCampanha);
+}
+
+function obterGruposCampanha(idCampanha) {
+    if (!mapaGruposPorCampanha.has(idCampanha)) {
+        mapaGruposPorCampanha.set(idCampanha, new Map());
+    }
+    return mapaGruposPorCampanha.get(idCampanha);
+}
+
+function calcularTotalGruposGeral(idNorm) {
+    const todos = new Set();
+    for (const mapaPresenca of mapaPresencaPorCampanha.values()) {
+        const grps = mapaPresenca.get(idNorm);
+        if (grps) {
+            for (const gid of grps) todos.add(gid);
+        }
+    }
+    return todos.size;
+}
+
+function obterTodosGruposDoLead(idNorm) {
+    const todos = new Set();
+    for (const mapaPresenca of mapaPresencaPorCampanha.values()) {
+        const grps = mapaPresenca.get(idNorm);
+        if (grps) {
+            for (const gid of grps) todos.add(gid);
+        }
+    }
+    return todos;
+}
+
+// Aliases para compatibilidade retroativa
+const gruposBlackOficiais = obterGruposCampanha('1mVRQCG59lTdqDxWZn3n');
+const gruposBaseForteOficiais = obterGruposCampanha('FeirPHs7jY1cgayuSles');
+const presencaBlack = obterPresencaCampanha('1mVRQCG59lTdqDxWZn3n');
+const presencaBaseForte = obterPresencaCampanha('FeirPHs7jY1cgayuSles');
 
 const adminsGlobais = new Set();
 const travasRedundancia = new Set();
 const mapaLidParaTelefone = new Map(); // lid -> telefone real
 
 function obterNomeGrupo(idGrupo) {
-    if (gruposBlackOficiais.has(idGrupo)) return gruposBlackOficiais.get(idGrupo).subject;
-    if (gruposBaseForteOficiais.has(idGrupo)) return gruposBaseForteOficiais.get(idGrupo).subject;
+    for (const grps of mapaGruposPorCampanha.values()) {
+        if (grps.has(idGrupo)) return grps.get(idGrupo).subject;
+    }
+    const info = obterInfoGrupoCampanha(idGrupo);
+    if (info && info.nomeGrupo) return info.nomeGrupo;
     return idGrupo;
 }
 
@@ -833,33 +938,37 @@ function desbanir(numeroAlvo) {
 }
 
 // =====================================================================
-// 🎯 FASE 1: VARREDURA E LIMPEZA INICIAL (BLACK + BASE FORTE)
+// 🎯 FASE 1: VARREDURA E LIMPEZA INICIAL (TODAS AS CAMPANHAS ATIVAS DO SENDFLOW)
 // =====================================================================
 async function executarLimpezaInicial() {
     configAtual = carregarConfig();
     const limiteMax = configAtual.limiteGruposPorCampanha;
     const limiteBan = configAtual.limiteBanPermanente;
 
+    const cacheSendflow = getCacheCampanhas();
+    const totalCampAtivas = cacheSendflow.totalCampanhasAtivas || 2;
+
     console.log('\n=================================================================');
-    console.log('🛡️  FASE 1: MAPEANDO GRUPOS (BLACK VITALÍCIA & BASE FORTE)...');
-    console.log(`📌  Regra Saturação: Máx. ${limiteMax} grupos por pessoa`);
+    console.log(`🛡️  FASE 1: MAPEANDO GRUPOS DE TODAS AS CAMPANHAS ATIVAS DO SENDFLOW (${totalCampAtivas} campanhas)...`);
+    console.log(`📌  Regra Saturação: Máx. ${limiteMax} grupos por pessoa na mesma campanha`);
     console.log(`⛔  Regra Ban Permanente: Acima de ${limiteBan} links = Ban total + Remoção de TODOS os grupos`);
     console.log('=================================================================');
 
     adminsGlobais.clear();
-    gruposBlackOficiais.clear();
-    gruposBaseForteOficiais.clear();
     mapaAdminGrupos.clear();
-    presencaBlack.clear();
-    presencaBaseForte.clear();
+    mapaGruposPorCampanha.clear();
+    mapaPresencaPorCampanha.clear();
 
     for (const sniper of snipersAtivos) {
         try {
             const all = await sniper.sock.groupFetchAllParticipating();
             for (const id in all) {
                 const g = all[id];
-                const campanha = identificarCampanha(g.subject);
-                if (!campanha) continue;
+                const infoCamp = obterInfoCompletaCampanha(id, g.subject);
+                if (!infoCamp) continue;
+
+                const { idCampanha, nomeCampanha } = infoCamp;
+                const mapaGruposDestaCampanha = obterGruposCampanha(idCampanha);
 
                 for (const p of (g.participants || [])) {
                     if (p.lid && p.jid) mapaLidParaTelefone.set(extrairNumeroLimpo(p.lid), extrairNumeroLimpo(p.jid));
@@ -886,14 +995,8 @@ async function executarLimpezaInicial() {
                     mapaAdminGrupos.get(id).add(sniper.indice);
                 }
 
-                if (campanha === 'BLACK_VITALICIA') {
-                    if (!gruposBlackOficiais.has(id) || gruposBlackOficiais.get(id).participants.length < g.participants.length) {
-                        gruposBlackOficiais.set(id, g);
-                    }
-                } else if (campanha === 'BASE_FORTE') {
-                    if (!gruposBaseForteOficiais.has(id) || gruposBaseForteOficiais.get(id).participants.length < g.participants.length) {
-                        gruposBaseForteOficiais.set(id, g);
-                    }
+                if (!mapaGruposDestaCampanha.has(id) || (mapaGruposDestaCampanha.get(id).participants?.length || 0) < (g.participants?.length || 0)) {
+                    mapaGruposDestaCampanha.set(id, g);
                 }
             }
         } catch (e) {
@@ -901,16 +1004,11 @@ async function executarLimpezaInicial() {
         }
     }
 
-    const blackFiltrados = Array.from(gruposBlackOficiais.values()).filter(g => g.participants.length > 0);
-    const baseForteFiltrados = Array.from(gruposBaseForteOficiais.values());
-
-    console.log(`\n✅ Black Vitalícia: ${blackFiltrados.length} grupos oficiais com leads.`);
-    console.log(`✅ Desafio Base Forte: ${baseForteFiltrados.length} grupos oficiais.`);
-    console.log(`👑 Total de Administradores protegidos: ${adminsGlobais.size}`);
+    console.log(`\n👑 Total de Administradores globais protegidos: ${adminsGlobais.size}`);
     console.log(`📋 Total na Whitelist de Imunidade: ${cacheWhitelist.length}`);
     console.log(`⛔ Total na Blacklist Permanente: ${cacheBlacklist.length}`);
 
-    async function auditarELimparCampanha(nomeCampanha, listaGrupos, mapaPresencaRAM) {
+    async function auditarELimparCampanha(idCampanha, nomeCampanha, listaGrupos, mapaPresencaRAM) {
         console.log(`\n-------------------------------------------------------------`);
         console.log(`🔍 AUDITANDO: ${nomeCampanha} (${listaGrupos.length} grupos)`);
         console.log(`-------------------------------------------------------------`);
@@ -921,7 +1019,7 @@ async function executarLimpezaInicial() {
             const info = { id: g.id, subject: g.subject, creation: g.creation || 0 };
             const jaVisto = new Set();
 
-            for (const p of g.participants) {
+            for (const p of (g.participants || [])) {
                 let num = extrairNumeroParticipante(p);
                 if (mapaLidParaTelefone.has(num)) num = mapaLidParaTelefone.get(num);
                 if (!num) continue;
@@ -951,6 +1049,9 @@ async function executarLimpezaInicial() {
                 if (adminsGlobais.has(num) || adminsGlobais.has(idN) || p.admin === 'admin' || p.admin === 'superadmin') {
                     reg.ehAdmin = true;
                 }
+                if (ehAdmDaCampanha(idCampanha, num) || ehAdmDaCampanha(idCampanha, idN)) {
+                    reg.ehAdmin = true;
+                }
                 if (estaNaWhitelist(num, snipersAtivos) || estaNaWhitelist(idN, snipersAtivos)) {
                     reg.ehWhitelist = true;
                 }
@@ -966,13 +1067,15 @@ async function executarLimpezaInicial() {
         for (const [idN, dados] of mapaAlvos.entries()) {
             if (dados.ehAdmin || dados.ehWhitelist) continue;
 
-            const excedeuLimiteBan = dados.grupos.length > limiteBan;
+            const totalGeral = calcularTotalGruposGeral(idN);
+            const excedeuLimiteBan = dados.grupos.length > limiteBan || totalGeral > limiteBan;
+
             if (excedeuLimiteBan || dados.ehBlacklist) {
                 const motivoBan = dados.ehBlacklist
                     ? 'Presente na Blacklist Permanente'
-                    : `Detectado em ${dados.grupos.length} links (Limite permitido: ${limiteBan})`;
+                    : `Detectado em ${Math.max(dados.grupos.length, totalGeral)} links (Limite permitido: ${limiteBan})`;
 
-                console.log(`⛔ [BAN PERMANENTE] Lead ${dados.numero} (${dados.grupos.length} grupos). Motivo: ${motivoBan}. Será removido de TODOS os grupos!`);
+                console.log(`⛔ [BAN PERMANENTE] Lead ${dados.numero} (${dados.grupos.length} grupos em ${nomeCampanha} | Total: ${totalGeral}). Motivo: ${motivoBan}. Será removido de TODOS os grupos!`);
                 adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${dados.numero} banido permanentemente (${dados.grupos.length} grps). Expulsando de TODOS os grupos sem exceção!`);
 
                 if (!estaNaBlacklist(dados.numero)) {
@@ -981,7 +1084,7 @@ async function executarLimpezaInicial() {
                         numeroFormatado: formatarExibicao(dados.numero),
                         motivo: motivoBan,
                         dataBanimento: new Date().toISOString(),
-                        totalGrupos: dados.grupos.length
+                        totalGrupos: Math.max(dados.grupos.length, totalGeral)
                     });
                     salvarBlacklist(cacheBlacklist);
                 }
@@ -1083,8 +1186,17 @@ async function executarLimpezaInicial() {
         console.log(`🏁 [${nomeCampanha}] Limpeza concluída: ${sucessos}/${totalKicks} kicks executados.`);
     }
 
-    await auditarELimparCampanha('BLACK VITALÍCIA (FASE 1)', blackFiltrados, presencaBlack);
-    await auditarELimparCampanha('DESAFIO BASE FORTE (FASE 2)', baseForteFiltrados, presencaBaseForte);
+    // Audita todas as campanhas ativas mapeadas
+    for (const [idCampanha, mapaGrupos] of mapaGruposPorCampanha.entries()) {
+        const listaGrupos = Array.from(mapaGrupos.values()).filter(g => g.participants && g.participants.length > 0);
+        if (listaGrupos.length === 0) continue;
+
+        const infoExemplo = obterInfoCompletaCampanha(listaGrupos[0].id, listaGrupos[0].subject);
+        const nomeCampanha = infoExemplo ? infoExemplo.nomeCampanha : idCampanha;
+        const presencaCampanha = obterPresencaCampanha(idCampanha);
+
+        await auditarELimparCampanha(idCampanha, nomeCampanha, listaGrupos, presencaCampanha);
+    }
 }
 
 // =====================================================================
@@ -1174,7 +1286,7 @@ async function processarFilaKicksRealtime() {
 }
 
 // =====================================================================
-// 🛑 FASE 2: CATRACA SENTINELA 24/7 (BLACK + BASE FORTE)
+// 🛑 FASE 2: CATRACA SENTINELA 24/7 (TODAS AS CAMPANHAS ATIVAS DO SENDFLOW)
 // =====================================================================
 function vincularListenersRealtime(sniper) {
     sniper.sock.ev.on('group-participants.update', async (evento) => {
@@ -1182,28 +1294,28 @@ function vincularListenersRealtime(sniper) {
 
         const idGrupo = evento.id;
         let nomeGrupo = idGrupo;
-        let campanha = null;
+        let infoCamp = obterInfoCompletaCampanha(idGrupo, null);
 
-        if (gruposBlackOficiais.has(idGrupo)) {
-            campanha = 'BLACK_VITALICIA';
-            nomeGrupo = gruposBlackOficiais.get(idGrupo).subject;
-        } else if (gruposBaseForteOficiais.has(idGrupo)) {
-            campanha = 'BASE_FORTE';
-            nomeGrupo = gruposBaseForteOficiais.get(idGrupo).subject;
-        } else {
+        if (!infoCamp) {
             try {
                 const meta = await sniper.sock.groupMetadata(idGrupo);
                 nomeGrupo = meta?.subject || idGrupo;
-                campanha = identificarCampanha(nomeGrupo);
-                if (campanha === 'BLACK_VITALICIA') gruposBlackOficiais.set(idGrupo, meta);
-                if (campanha === 'BASE_FORTE') gruposBaseForteOficiais.set(idGrupo, meta);
+                infoCamp = obterInfoCompletaCampanha(idGrupo, nomeGrupo);
+                if (infoCamp) {
+                    const mapaGrupos = obterGruposCampanha(infoCamp.idCampanha);
+                    if (!mapaGrupos.has(idGrupo)) mapaGrupos.set(idGrupo, meta);
+                }
             } catch (e) { }
+        } else {
+            nomeGrupo = infoCamp.nomeGrupo || idGrupo;
         }
 
-        if (!campanha) return;
+        // Se o grupo não pertence a nenhuma das campanhas ativas do SendFlow, não monitora
+        if (!infoCamp) return;
 
-        const mapaPresencaAlvo = campanha === 'BLACK_VITALICIA' ? presencaBlack : presencaBaseForte;
-        const tagCampanha = campanha === 'BLACK_VITALICIA' ? 'BLACK VITALÍCIA' : 'BASE FORTE';
+        const idCampanha = infoCamp.idCampanha;
+        const tagCampanha = infoCamp.nomeCampanha;
+        const mapaPresencaAlvo = obterPresencaCampanha(idCampanha);
 
         for (const novato of evento.participants) {
             let idNovatoBruto = typeof novato === 'object' ? (novato.id || novato.jid || '') : String(novato);
@@ -1251,9 +1363,15 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
-            // 🛡️ REGRA 2: IMUNIDADES (WHITELIST & ADMINS)
+            // 🛡️ REGRA 2: IMUNIDADES (WHITELIST, ADMS DA CAMPANHA & ADMINS DO WHATSAPP)
+            if (ehAdmDaCampanha(idCampanha, numReal) || ehAdmDaCampanha(idCampanha, idNorm)) {
+                console.log(`👑 [CATRACA - ADM DA CAMPANHA] ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}) [Imune por ser ADM desta Campanha].`);
+                adicionarEventoFeed('ADMIN', `👑 ${formatarExibicao(numReal)} liberado em "${nomeGrupo}" (${tagCampanha}) [ADM da Campanha]`);
+                continue;
+            }
+
             if (estaNaWhitelist(numReal, snipersAtivos) || estaNaWhitelist(idNorm, snipersAtivos)) {
-                console.log(`🛡️ [CATRACA - WHITELIST] ${numReal} entrou em "${nomeGrupo}" (Imune por Whitelist).`);
+                console.log(`🛡️ [CATRACA - WHITELIST] ${numReal} entrou em "${nomeGrupo}" (Imune por Whitelist Geral).`);
                 adicionarEventoFeed('WHITELIST', `🛡️ ${formatarExibicao(numReal)} liberado em "${nomeGrupo}" (Imune por Whitelist)`);
                 continue;
             }
@@ -1264,21 +1382,19 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
-            // 📊 ATUALIZAÇÃO DA PRESENÇA
+            // 📊 ATUALIZAÇÃO DA PRESENÇA NA CAMPANHA E GERAL
             if (!mapaPresencaAlvo.has(idNorm)) mapaPresencaAlvo.set(idNorm, new Set());
             const gruposDoLead = mapaPresencaAlvo.get(idNorm);
             gruposDoLead.add(idGrupo);
 
-            const totalEmBlack = presencaBlack.get(idNorm)?.size || 0;
-            const totalEmBaseForte = presencaBaseForte.get(idNorm)?.size || 0;
-            const totalLinksGeral = totalEmBlack + totalEmBaseForte;
+            const totalLinksGeral = calcularTotalGruposGeral(idNorm);
 
             configAtual = carregarConfig();
             const limiteMax = configAtual.limiteGruposPorCampanha;
             const limiteBan = configAtual.limiteBanPermanente;
 
             console.log(`🚪 [CATRACA] Lead ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}). Presença na campanha: ${gruposDoLead.size}/${limiteMax} permitidos. Total de links geral: ${totalLinksGeral}.`);
-            adicionarEventoFeed('ENTRADA', `🚪 Lead ${formatarExibicao(numReal)} entrou em "${nomeGrupo}" [${gruposDoLead.size}/${limiteMax} grps | Total geral: ${totalLinksGeral}]`);
+            adicionarEventoFeed('ENTRADA', `🚪 Lead ${formatarExibicao(numReal)} entrou em "${nomeGrupo}" [${gruposDoLead.size}/${limiteMax} na campanha | Total geral: ${totalLinksGeral}]`);
 
             // 💀 REGRA 3: BAN PERMANENTE SE ULTRAPASSAR O LIMITE DE LINKS (> limiteBan)
             if (totalLinksGeral > limiteBan || gruposDoLead.size > limiteBan) {
@@ -1296,10 +1412,8 @@ function vincularListenersRealtime(sniper) {
                     salvarBlacklist(cacheBlacklist);
                 }
 
-                const todosGruposDoLead = new Set([
-                    ...(presencaBlack.get(idNorm) || []),
-                    ...(presencaBaseForte.get(idNorm) || [])
-                ]);
+                const todosGruposDoLead = obterTodosGruposDoLead(idNorm);
+                todosGruposDoLead.add(idGrupo);
 
                 for (const gid of todosGruposDoLead) {
                     enfileirarKickRealtime({
@@ -1316,7 +1430,7 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
-            // ⚖️ REGRA 4: SATURAÇÃO NORMAL (> limiteMax)
+            // ⚖️ REGRA 4: SATURAÇÃO NORMAL NA MESMA CAMPANHA (> limiteMax)
             if (gruposDoLead.size > limiteMax) {
                 console.log(`\n🚨 [ALERTA CATRACA - ${tagCampanha}] Lead ${numReal} violou a regra de saturação! (${gruposDoLead.size}/${limiteMax} permitidos)`);
                 adicionarEventoFeed('ALERTA', `🚨 Saturação! Lead ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size}/${limiteMax} grupos em ${tagCampanha}. Grupo: "${nomeGrupo}"`);
@@ -1352,10 +1466,17 @@ async function iniciarOperacaoAegisCompleta() {
 ██║  ██║███████╗╚██████╔╝██║███████║    ██████╦╝███████╗██║  ██║╚██████╗██║  ██╗
 ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
     `);
-    console.log('🛡️  MOTOR UNIFICADO AEGIS: BLACK VITALÍCIA & DESAFIO BASE FORTE');
-    console.log(`📌  Configuração Atual: Máx. ${configAtual.limiteGruposPorCampanha} Grupos por pessoa | Ban Permanente: > ${configAtual.limiteBanPermanente} links`);
+    console.log('🛡️  MOTOR UNIFICADO AEGIS: TODAS AS CAMPANHAS ATIVAS DO SENDFLOW');
+    console.log(`📌  Configuração Atual: Máx. ${configAtual.limiteGruposPorCampanha} Grupos por pessoa na mesma campanha | Ban Permanente: > ${configAtual.limiteBanPermanente} links`);
     console.log(`🤖  Frota de ADMs (Administradores dos Grupos): ${qtdAdms} contas configuradas`);
     console.log('=================================================================\n');
+
+    // 1. Carregar campanhas locais do SendFlow e iniciar cron de 12 horas
+    carregarCampanhasLocais();
+    iniciarAgendamento12Horas();
+    sincronizarCampanhasSendflow().catch(e => {
+        console.warn('[!] Sincronização em background do SendFlow:', e.message);
+    });
 
     console.log(`[+] Conectando frota de ${qtdAdms} Administradores...`);
     for (let i = 1; i <= qtdAdms; i++) {
@@ -1374,10 +1495,11 @@ async function iniciarOperacaoAegisCompleta() {
     await executarLimpezaInicial();
 
     console.log('\n=================================================================');
-    console.log('🟢 [SENTINELA ATIVO 24/7] VIGIANDO BLACK VITALÍCIA & BASE FORTE!');
-    console.log(`   • Tolerância de Saturação: até ${configAtual.limiteGruposPorCampanha} grupos.`);
+    console.log('🟢 [SENTINELA ATIVO 24/7] VIGIANDO TODAS AS CAMPANHAS ATIVAS DO SENDFLOW!');
+    console.log(`   • Tolerância de Saturação: até ${configAtual.limiteGruposPorCampanha} grupos por campanha.`);
     console.log(`   • Ban Permanente Automático: acima de ${configAtual.limiteBanPermanente} links = Remoção total sem exceção.`);
-    console.log('   • Whitelist da Equipe 100% protegida.');
+    console.log('   • Verificação periódica automática de grupos: a cada 12 horas.');
+    console.log('   • ADMs por campanha e Whitelist 100% protegidos.');
     console.log('=================================================================\n');
 
     sentinelaRealtimeAtivo = true;

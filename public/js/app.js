@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let listaAdminsCache = [];
     let listaBlacklistCache = [];
     let listaEspioesCache = [];
+    let listaCampanhasCache = [];
     let configCache = { limiteGruposPorCampanha: 4, quantidadeEspioes: 4, limiteBanPermanente: 10 };
     
     let numeroParaExcluir = null;
@@ -27,6 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     const serverStatusText = document.getElementById('server-status-text');
     const btnRefreshAll = document.getElementById('btn-refresh-all');
+
+    const navBadgeCampanhas = document.getElementById('nav-badge-campanhas');
+    const btnSyncSendflow = document.getElementById('btn-sync-sendflow');
+    const syncIcon = document.getElementById('sync-icon');
+    const syncText = document.getElementById('sync-text');
+    const sendflowValUltimaSync = document.getElementById('sendflow-val-ultima-sync');
+    const sendflowValProximaSync = document.getElementById('sendflow-val-proxima-sync');
+    const sendflowValTotalCampanhas = document.getElementById('sendflow-val-total-campanhas');
+    const sendflowValTotalGrupos = document.getElementById('sendflow-val-total-grupos');
+    const syncStatusMsg = document.getElementById('sync-status-msg');
+    const searchCampanhaInput = document.getElementById('search-campanha-input');
+    const containerCampanhasLista = document.getElementById('container-campanhas-lista');
 
     const valTotalAdmins = document.getElementById('val-total-admins');
     const badgeTotalAdmins = document.getElementById('badge-total-admins');
@@ -65,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewElement) viewElement.classList.add('active');
 
             // Carrega dados sob demanda se necessário
+            if (targetView === 'campanhas') carregarCampanhasSendflow();
             if (targetView === 'espioes') carregarEspioes();
             if (targetView === 'blacklist') carregarBlacklist();
             if (targetView === 'config') carregarConfiguracoes();
@@ -1194,6 +1208,331 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
+    // 🎯 MÓDULO SENDFLOW: CAMPANHAS ATIVAS & GESTÃO DE ADMS
+    // =================================================================
+    async function carregarCampanhasSendflow() {
+        try {
+            const res = await fetch('/api/sendflow/campanhas');
+            const data = await res.json();
+            if (data.sucesso) {
+                listaCampanhasCache = data.campanhas || [];
+                atualizarHeaderSendflow(data);
+                renderizarCampanhas(searchCampanhaInput ? searchCampanhaInput.value : '');
+            }
+        } catch (err) {
+            console.error('[!] Erro ao carregar campanhas Sendflow:', err);
+        }
+    }
+
+    function atualizarHeaderSendflow(data) {
+        if (navBadgeCampanhas) {
+            navBadgeCampanhas.textContent = data.totalCampanhasAtivas || 0;
+        }
+        if (sendflowValTotalCampanhas) {
+            sendflowValTotalCampanhas.textContent = `${data.totalCampanhasAtivas || 0} ativas`;
+        }
+        if (sendflowValTotalGrupos) {
+            sendflowValTotalGrupos.textContent = `${data.totalGrupos || 0} grupos`;
+        }
+        if (sendflowValUltimaSync) {
+            if (data.ultimaAtualizacao) {
+                const dt = new Date(data.ultimaAtualizacao);
+                sendflowValUltimaSync.textContent = dt.toLocaleString('pt-BR');
+            } else {
+                sendflowValUltimaSync.textContent = 'Não sincronizado';
+            }
+        }
+        if (sendflowValProximaSync) {
+            if (data.proximaAtualizacaoPrevista) {
+                const dtP = new Date(data.proximaAtualizacaoPrevista);
+                sendflowValProximaSync.textContent = `Em ${dtP.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+            } else {
+                sendflowValProximaSync.textContent = 'A cada 12 horas';
+            }
+        }
+
+        if (syncStatusMsg && data.status) {
+            if (data.status.status === 'rate_limited') {
+                syncStatusMsg.style.display = 'flex';
+                syncStatusMsg.className = 'sync-status-alert alert-warning';
+                syncStatusMsg.innerHTML = `<span>⏳</span><span>${escapeHtml(data.status.mensagem || 'SendFlow com limite temporário de requisições. Cache local seguro ativo.')}</span>`;
+            } else if (data.status.status === 'erro') {
+                syncStatusMsg.style.display = 'flex';
+                syncStatusMsg.className = 'sync-status-alert alert-error';
+                syncStatusMsg.innerHTML = `<span>⚠️</span><span>${escapeHtml(data.status.mensagem || 'Falha ao sincronizar com SendFlow.')}</span>`;
+            } else {
+                syncStatusMsg.style.display = 'none';
+            }
+        }
+    }
+
+    function renderizarCampanhas(filtro = '') {
+        if (!containerCampanhasLista) return;
+
+        const termo = (filtro || '').trim().toLowerCase();
+        const filtradas = listaCampanhasCache.filter(c => {
+            if (!termo) return true;
+            return (c.name && c.name.toLowerCase().includes(termo)) ||
+                   (c.id && c.id.toLowerCase().includes(termo));
+        });
+
+        if (filtradas.length === 0) {
+            containerCampanhasLista.innerHTML = `
+                <div class="campanhas-empty-state">
+                    <span>🔍</span>
+                    <span>Nenhuma campanha ativa encontrada ${termo ? `para o termo "${escapeHtml(termo)}"` : ''}.</span>
+                </div>
+            `;
+            return;
+        }
+
+        containerCampanhasLista.innerHTML = '';
+
+        filtradas.forEach(camp => {
+            const card = document.createElement('div');
+            card.className = 'campanha-card';
+            card.dataset.releaseId = camp.id;
+
+            const admsList = Array.isArray(camp.adms) ? camp.adms : [];
+            const gruposList = Array.isArray(camp.grupos) ? camp.grupos : [];
+
+            let admsHtml = '';
+            if (admsList.length > 0) {
+                admsHtml = admsList.map(adm => `
+                    <div class="adm-pill">
+                        <span class="adm-pill-name">👑 ${escapeHtml(adm.nome || 'ADM')}</span>
+                        <span class="adm-pill-phone">${escapeHtml(adm.numeroFormatado || adm.numero)}</span>
+                        <button type="button" class="btn-remove-adm-pill" data-release-id="${camp.id}" data-numero="${adm.numero}" title="Remover ADM desta campanha">
+                            ✕
+                        </button>
+                    </div>
+                `).join('');
+            } else {
+                admsHtml = `<span class="adms-empty-hint">Nenhum ADM exclusivo cadastrado ainda. Adicione abaixo para que fique de olho nesta campanha.</span>`;
+            }
+
+            let gruposChipsHtml = '';
+            if (gruposList.length > 0) {
+                gruposChipsHtml = gruposList.map(g => `
+                    <div class="grupo-chip">
+                        <div class="grupo-chip-title" title="${escapeHtml(g.name)}">${escapeHtml(g.name || 'Grupo sem nome')}</div>
+                        <div class="grupo-chip-meta">
+                            <span>ID: ${escapeHtml(g.gid ? g.gid.split('@')[0] : g.id)}</span>
+                            <span>👥 ${g.participantsAmount || 0} leads</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                gruposChipsHtml = `<div style="color: var(--text-muted); font-size: 0.8rem; padding: 8px;">Nenhum grupo detalhado retornado pelo SendFlow para esta campanha ainda.</div>`;
+            }
+
+            card.innerHTML = `
+                <div class="campanha-top-row">
+                    <div class="campanha-title-area">
+                        <h3 class="campanha-title">
+                            <span>🎯</span> ${escapeHtml(camp.name)}
+                        </h3>
+                        <span class="campanha-id-tag">ID SENDFLOW: ${escapeHtml(camp.id)}</span>
+                    </div>
+                    <div class="campanha-badges-row">
+                        <span class="badge-tag badge-active-sendflow">
+                            <span class="pulsing-dot" style="width: 6px; height: 6px;"></span> Ativa
+                        </span>
+                        <span class="badge-tag badge-groups-count">
+                            📁 ${gruposList.length || camp.totalGrupos || 0} Grupos
+                        </span>
+                        <span class="badge-tag badge-adms-count">
+                            👑 ${admsList.length} ADMs
+                        </span>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO DE ADMS DA CAMPANHA -->
+                <div class="campanha-adms-box">
+                    <div class="adms-box-header">
+                        <div>
+                            <div class="adms-box-title">👑 ADMs Dedicados (Ficam de olho nesta campanha)</div>
+                            <div class="adms-box-subtitle">Números com imunidade total e responsáveis pela gestão destes grupos</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm-action btn-import-adms" data-release-id="${camp.id}" title="Importar administradores detectados pelo SendFlow para esta campanha">
+                            📥 Importar do SendFlow
+                        </button>
+                    </div>
+
+                    <div class="adms-pills-wrap" id="pills-camp-${camp.id}">
+                        ${admsHtml}
+                    </div>
+
+                    <!-- FORMULÁRIO RÁPIDO PARA ADICIONAR ADM NESTA CAMPANHA -->
+                    <form class="add-adm-inline-form" data-release-id="${camp.id}">
+                        <input 
+                            type="text" 
+                            class="form-input adm-nome-input" 
+                            placeholder="Nome do ADM (ex: Suporte Black)" 
+                            required
+                        >
+                        <input 
+                            type="tel" 
+                            class="form-input adm-tel-input" 
+                            placeholder="WhatsApp com DDD (ex: 11999999999)" 
+                            required
+                        >
+                        <button type="submit" class="btn btn-primary btn-sm-action">
+                            ➕ Adicionar ADM
+                        </button>
+                    </form>
+                </div>
+
+                <!-- ACORDEÃO DE GRUPOS -->
+                <div class="campanha-grupos-accordion">
+                    <button type="button" class="accordion-header" data-target="content-groups-${camp.id}">
+                        <span>📁 Ver grupos vinculados no SendFlow (${gruposList.length || camp.totalGrupos || 0} grupos)</span>
+                        <span class="accordion-arrow">▼</span>
+                    </button>
+                    <div class="accordion-content" id="content-groups-${camp.id}">
+                        <div class="grupos-chips-grid">
+                            ${gruposChipsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            containerCampanhasLista.appendChild(card);
+        });
+
+        vincularEventosCardsCampanhas();
+    }
+
+    function vincularEventosCardsCampanhas() {
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.onclick = () => {
+                const targetId = header.dataset.target;
+                const content = document.getElementById(targetId);
+                if (!content) return;
+                const isOpen = content.classList.contains('open');
+                content.classList.toggle('open', !isOpen);
+                header.classList.toggle('open', !isOpen);
+            };
+        });
+
+        document.querySelectorAll('.add-adm-inline-form').forEach(form => {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const releaseId = form.dataset.releaseId;
+                const nomeInput = form.querySelector('.adm-nome-input');
+                const telInput = form.querySelector('.adm-tel-input');
+                const nome = nomeInput.value.trim();
+                const numero = telInput.value.trim();
+
+                if (!numero) {
+                    showToast('Digite o número de WhatsApp do ADM.', 'warning');
+                    return;
+                }
+
+                try {
+                    showToast('Cadastrando ADM na campanha...');
+                    const res = await fetch(`/api/sendflow/campanhas/${releaseId}/adms`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nome, numero })
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || 'ADM adicionado com sucesso!');
+                        nomeInput.value = '';
+                        telInput.value = '';
+                        await carregarCampanhasSendflow();
+                    } else {
+                        showToast(data.erro || 'Erro ao adicionar ADM.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Falha na comunicação com o servidor.', 'error');
+                }
+            };
+        });
+
+        document.querySelectorAll('.btn-remove-adm-pill').forEach(btn => {
+            btn.onclick = async () => {
+                const releaseId = btn.dataset.releaseId;
+                const numero = btn.dataset.numero;
+                if (!confirm(`Deseja remover este ADM desta campanha?`)) return;
+
+                try {
+                    showToast('Removendo ADM...');
+                    const res = await fetch(`/api/sendflow/campanhas/${releaseId}/adms/${encodeURIComponent(numero)}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || 'ADM removido com sucesso!');
+                        await carregarCampanhasSendflow();
+                    } else {
+                        showToast(data.erro || 'Falha ao remover ADM.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Erro ao remover ADM da campanha.', 'error');
+                }
+            };
+        });
+
+        document.querySelectorAll('.btn-import-adms').forEach(btn => {
+            btn.onclick = async () => {
+                const releaseId = btn.dataset.releaseId;
+                try {
+                    showToast('Importando administradores do SendFlow...');
+                    const res = await fetch(`/api/sendflow/campanhas/${releaseId}/importar-adms`, {
+                        method: 'POST'
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || 'Admins importados com sucesso!');
+                        await carregarCampanhasSendflow();
+                    } else {
+                        showToast(data.erro || 'Nenhum admin importado.', 'warning');
+                    }
+                } catch (err) {
+                    showToast('Erro ao importar admins do SendFlow.', 'error');
+                }
+            };
+        });
+    }
+
+    if (btnSyncSendflow) {
+        btnSyncSendflow.addEventListener('click', async () => {
+            if (btnSyncSendflow.disabled) return;
+            btnSyncSendflow.disabled = true;
+            if (syncIcon) syncIcon.classList.add('rotating');
+            if (syncText) syncText.textContent = 'Sincronizando SendFlow...';
+            showToast('Consultando API do SendFlow para atualizar campanhas e grupos...', 'warning');
+
+            try {
+                const res = await fetch('/api/sendflow/sincronizar', { method: 'POST' });
+                const data = await res.json();
+                if (data.sucesso) {
+                    showToast(data.mensagem || 'Campanhas e grupos sincronizados com sucesso!');
+                } else if (data.rateLimited) {
+                    showToast(data.mensagem || 'SendFlow com limite momentâneo. Cache seguro mantido.', 'warning');
+                } else {
+                    showToast(data.mensagem || data.erro || 'Erro na sincronização.', 'error');
+                }
+                await carregarCampanhasSendflow();
+            } catch (err) {
+                showToast('Erro ao comunicar com a API do SendFlow.', 'error');
+            } finally {
+                btnSyncSendflow.disabled = false;
+                if (syncIcon) syncIcon.classList.remove('rotating');
+                if (syncText) syncText.textContent = 'Sincronizar SendFlow Agora';
+            }
+        });
+    }
+
+    if (searchCampanhaInput) {
+        searchCampanhaInput.addEventListener('input', (e) => {
+            renderizarCampanhas(e.target.value);
+        });
+    }
+
+    // =================================================================
     // 📊 STATUS GERAL DO SERVIDOR E TELEMETRIA
     // =================================================================
     async function carregarStatusGeral() {
@@ -1223,6 +1562,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         const conectados = listaEspioesCache.filter(x => x.conectado).length;
                         atualizarMetricasEspioes(conectados, listaEspioesCache.length, listaEspioesCache);
                     }
+                    if (data.aegis.sendflow) {
+                        atualizarHeaderSendflow(data.aegis.sendflow);
+                    }
                 }
             }
         } catch (e) {
@@ -1250,6 +1592,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showToast(data.mensagem);
                     setTimeout(() => {
                         carregarStatusGeral();
+                        carregarCampanhasSendflow();
                         carregarEspioes();
                         carregarWhitelist();
                         carregarBlacklist();
@@ -1270,6 +1613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRefreshAll.classList.add('rotating');
         await Promise.all([
             carregarStatusGeral(),
+            carregarCampanhasSendflow(),
             carregarWhitelist(),
             carregarEspioes(),
             carregarBlacklist(),
@@ -1283,6 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🚀 BOOTSTRAP INICIAL & POLLING PERIÓDICO
     // =================================================================
     carregarStatusGeral();
+    carregarCampanhasSendflow();
     carregarWhitelist();
     carregarEspioes();
     carregarBlacklist();

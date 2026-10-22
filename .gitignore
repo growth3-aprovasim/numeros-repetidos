@@ -1,6 +1,53 @@
+# =====================================================================
+# 🛡️ AEGIS C2 // ARQUIVO GITIGNORE
+# Bloqueio de credenciais, sessões, números sensíveis e arquivos locais
+# =====================================================================
+
+# Dependências do Node.js
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Variáveis de ambiente & Segredos (chaves de API, senhas)
+.env
+.env.*
+.env.local
+*.env
+!.env.example
+
+# Sessões do WhatsApp Baileys (Chaves criptográficas e credenciais)
+auth_*/
 auth_sniper_*/
 auth_spotter_*/
+auth_test_pairing/
+
+# Backups e Compactados de Sessão
+*.zip
+*.tar
+*.gz
+*.rar
+aegis_sessoes_snipers.zip
+
+# Listas de Leads, Números de Clientes, Whitelist e Dados Sensíveis
+whitelist_aegis.json
+whitelist_metadata.json
 blacklist_aegis.json
+campanhas_adms.json
+sendflow_campanhas_ativas.json
+resultado_auditoria.json
+resultado_campanhas.json
 estatisticas_aegis.json
-.env
+
+# Logs e Arquivos Temporários de Auditoria/Execução
+*.log
+log_*.json
+temp_check.js
+
+# Arquivos do Sistema Operacional e IDEs
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

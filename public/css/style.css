@@ -1637,3 +1637,420 @@ body {
     color: #f43f5e !important;
 }
 
+/* =====================================================================
+   🎯 ESTILOS DO MÓDULO SENDFLOW CAMPANHAS & ADMS
+   ===================================================================== */
+.sendflow-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.sendflow-banner-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 18px 0 14px 0;
+}
+
+.sendflow-info-box {
+    background: rgba(10, 16, 26, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-box-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.info-box-val {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+.sync-status-alert {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: fadeIn 0.25s ease;
+}
+
+.sync-status-alert.alert-success {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #a7f3d0;
+}
+
+.sync-status-alert.alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fde68a;
+}
+
+.sync-status-alert.alert-error {
+    background: rgba(244, 63, 94, 0.12);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    color: #fecdd3;
+}
+
+.campanhas-search-bar {
+    margin-top: 14px;
+}
+
+.search-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.search-input-wrapper .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.search-input-wrapper .search-input {
+    padding-left: 42px;
+}
+
+.campanhas-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.campanhas-loading-state,
+.campanhas-empty-state {
+    padding: 40px;
+    text-align: center;
+    background: var(--bg-surface);
+    border: var(--border-card);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* CARD INDIVIDUAL DA CAMPANHA */
+.campanha-card {
+    background: var(--bg-surface);
+    border: var(--border-card);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    backdrop-filter: blur(14px);
+    transition: var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.campanha-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--color-emerald), var(--color-cyan));
+    opacity: 0.8;
+}
+
+.campanha-card:hover {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.campanha-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.campanha-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.campanha-title {
+    font-size: 1.18rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.campanha-id-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.campanha-badges-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.badge-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-active-sendflow {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    color: #6ee7b7;
+}
+
+.badge-groups-count {
+    background: rgba(6, 182, 212, 0.15);
+    border: 1px solid rgba(6, 182, 212, 0.35);
+    color: #67e8f9;
+}
+
+.badge-adms-count {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fde047;
+}
+
+/* SEÇÃO DE ADMS DA CAMPANHA */
+.campanha-adms-box {
+    background: rgba(8, 13, 22, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.adms-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.adms-box-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #fde047;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.adms-box-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.adms-pills-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    min-height: 32px;
+    align-items: center;
+}
+
+.adm-pill {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: var(--radius-full);
+    padding: 5px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    transition: var(--transition-fast);
+}
+
+.adm-pill:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.18);
+}
+
+.adm-pill-name {
+    font-weight: 600;
+    color: #fef08a;
+}
+
+.adm-pill-phone {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+}
+
+.btn-remove-adm-pill {
+    background: none;
+    border: none;
+    color: #fda4af;
+    cursor: pointer;
+    font-size: 0.82rem;
+    padding: 2px 4px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.btn-remove-adm-pill:hover {
+    color: #f43f5e;
+    background: rgba(244, 63, 94, 0.2);
+}
+
+.adms-empty-hint {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* FORMULÁRIO DE ADIÇÃO DE ADM NA CAMPANHA */
+.add-adm-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.add-adm-inline-form .form-input {
+    flex: 1;
+    min-width: 140px;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+}
+
+.btn-sm-action {
+    padding: 8px 16px;
+    font-size: 0.82rem;
+}
+
+/* ACORDEÃO DE GRUPOS DA CAMPANHA */
+.campanha-grupos-accordion {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: rgba(8, 13, 22, 0.4);
+}
+
+.accordion-header {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: none;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: var(--transition-fast);
+}
+
+.accordion-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.accordion-arrow {
+    transition: transform 0.25s ease;
+    font-size: 0.8rem;
+}
+
+.accordion-header.open .accordion-arrow {
+    transform: rotate(180deg);
+}
+
+.accordion-content {
+    display: none;
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.accordion-content.open {
+    display: block;
+}
+
+.grupos-chips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.grupo-chip {
+    background: rgba(16, 22, 34, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    transition: var(--transition-fast);
+}
+
+.grupo-chip:hover {
+    border-color: rgba(6, 182, 212, 0.35);
+    background: rgba(16, 22, 34, 0.95);
+}
+
+.grupo-chip-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grupo-chip-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+

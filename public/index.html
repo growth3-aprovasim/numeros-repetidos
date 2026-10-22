@@ -113,7 +113,12 @@
 
         <!-- BARRA DE NAVEGAÇÃO PRINCIPAL (ABAS DE MÓDULOS) -->
         <nav class="main-nav-bar" id="main-nav-bar">
-            <button class="nav-tab-btn active" id="nav-btn-whitelist" data-view="whitelist">
+            <button class="nav-tab-btn active" id="nav-btn-campanhas" data-view="campanhas">
+                <span class="nav-tab-icon">🎯</span>
+                <span class="nav-tab-label">Campanhas SendFlow & ADMs</span>
+                <span class="nav-tab-badge badge-emerald" id="nav-badge-campanhas">0</span>
+            </button>
+            <button class="nav-tab-btn" id="nav-btn-whitelist" data-view="whitelist">
                 <span class="nav-tab-icon">👑</span>
                 <span class="nav-tab-label">Whitelist (Equipe Imune)</span>
                 <span class="nav-tab-badge" id="nav-badge-whitelist">0</span>
@@ -137,13 +142,77 @@
         <!-- LAYOUT DE DUAS COLUNAS PRINCIPAIS -->
         <main class="main-content-grid">
             
-            <!-- COLUNA ESQUERDA: VISTAS ALTERNÁVEIS (WHITELIST / ESPIÕES / BLACKLIST / CONFIG) -->
+            <!-- COLUNA ESQUERDA: VISTAS ALTERNÁVEIS (CAMPANHAS / WHITELIST / ESPIÕES / BLACKLIST / CONFIG) -->
             <div class="content-column left-column">
                 
                 <!-- ============================================================= -->
+                <!-- VISTA 0: CAMPANHAS ATIVAS DO SENDFLOW & GESTÃO DE ADMS -->
+                <!-- ============================================================= -->
+                <div class="module-view active" id="view-campanhas">
+                    
+                    <!-- CARD DO STATUS DA INTEGRAÇÃO SENDFLOW & CONTROLES -->
+                    <section class="glass-card" id="card-sendflow-status">
+                        <div class="card-header sendflow-header-flex">
+                            <div class="card-title-group">
+                                <h2 class="card-title">🎯 Campanhas Ativas do SendFlow & ADMs</h2>
+                                <p class="card-subtitle">
+                                    O Aegis analisa automaticamente todos os grupos das campanhas ativas do SendFlow. A checagem automática é renovada a cada 12 horas.
+                                </p>
+                            </div>
+                            <button class="btn btn-primary" id="btn-sync-sendflow" title="Sincronizar grupos do SendFlow agora">
+                                <span class="btn-icon" id="sync-icon">🔄</span>
+                                <span class="btn-text" id="sync-text">Sincronizar SendFlow Agora</span>
+                            </button>
+                        </div>
+
+                        <!-- CARDS INFORMATIVOS DE SINCRONIZAÇÃO -->
+                        <div class="sendflow-banner-grid">
+                            <div class="sendflow-info-box">
+                                <span class="info-box-label">ÚLTIMA SINCRONIZAÇÃO</span>
+                                <span class="info-box-val" id="sendflow-val-ultima-sync">Carregando...</span>
+                            </div>
+                            <div class="sendflow-info-box">
+                                <span class="info-box-label">PRÓXIMA CHECAGEM AUTOMÁTICA</span>
+                                <span class="info-box-val text-cyan" id="sendflow-val-proxima-sync">A cada 12 horas</span>
+                            </div>
+                            <div class="sendflow-info-box">
+                                <span class="info-box-label">CAMPANHAS ATIVAS</span>
+                                <span class="info-box-val text-emerald" id="sendflow-val-total-campanhas">0 ativas</span>
+                            </div>
+                            <div class="sendflow-info-box">
+                                <span class="info-box-label">GRUPOS MONITORADOS</span>
+                                <span class="info-box-val text-amber" id="sendflow-val-total-grupos">0 grupos</span>
+                            </div>
+                        </div>
+
+                        <div class="sync-status-alert" id="sync-status-msg" style="display: none;"></div>
+
+                        <!-- BARRA DE FILTRO / PESQUISA DE CAMPANHAS -->
+                        <div class="campanhas-search-bar">
+                            <div class="search-input-wrapper">
+                                <span class="search-icon">🔍</span>
+                                <input 
+                                    type="text" 
+                                    id="search-campanha-input" 
+                                    class="form-input search-input" 
+                                    placeholder="Filtrar campanhas ativas por nome ou ID..."
+                                >
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- CONTAINER DINÂMICO DE CARDS DE CAMPANHAS -->
+                    <div id="container-campanhas-lista" class="campanhas-cards-list">
+                        <div class="campanhas-loading-state">
+                            <span class="pulsing-dot"></span> Carregando campanhas ativas do SendFlow...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================================= -->
                 <!-- VISTA 1: WHITELIST (ADMINISTRADORES) -->
                 <!-- ============================================================= -->
-                <div class="module-view active" id="view-whitelist">
+                <div class="module-view" id="view-whitelist">
                     
                     <!-- CARD DE CADASTRO -->
                     <section class="glass-card" id="card-cadastro-whitelist">
