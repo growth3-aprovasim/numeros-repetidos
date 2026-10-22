@@ -284,65 +284,21 @@ async function sincronizarCampanhasSendflow(forcar = false) {
 
         console.log(`[🎯 SENDFLOW] ${todasReleases.length} campanhas no total | ${ativas.length} campanhas ATIVAS encontradas.`);
 
-        const novasCampanhas = [];
-        let totalGruposMapeados = 0;
-
-        for (let i = 0; i < ativas.length; i++) {
-            const rel = ativas[i];
-            console.log(`   [${i + 1}/${ativas.length}] Buscando grupos da campanha "${rel.name}" (${rel.id})...`);
-
-            // Delay de segurança entre requisições de grupos para evitar rate limit
-            await sleep(1500);
-
-            let gruposCampanha = [];
-            let resGrupos = await requestSendflow(`/releases/${rel.id}/groups`);
-
-            // Se bater em rate-limit durante o processo, aguarda e tenta 1 vez
-            if ((resGrupos.statusCode === 403 || resGrupos.statusCode === 429) && resGrupos.data?.retryAfterMs) {
-                const waitTime = Math.min(resGrupos.data.retryAfterMs + 1000, 65000);
-                console.log(`   ⏳ Rate limit momentâneo no grupo. Aguardando ${Math.ceil(waitTime / 1000)}s...`);
-                await sleep(waitTime);
-                resGrupos = await requestSendflow(`/releases/${rel.id}/groups`);
-            }
-
-            if (resGrupos.statusCode === 200 && Array.isArray(resGrupos.data)) {
-                gruposCampanha = resGrupos.data.map(g => ({
-                    id: g.id || g._id,
-                    name: g.name || '',
-                    gid: g.gid || g.jid || '',
-                    jid: g.jid || g.gid || '',
-                    inviteCode: g.inviteCode || '',
-                    full: Boolean(g.full),
-                    participantsAmount: Number(g.participantsAmount) || 0,
-                    count: Number(g.count) || 0,
-                    admins: Array.isArray(g.admins) ? g.admins.map(a => ({
-                        name: a.name || 'Admin',
-                        number: extrairNumeroLimpo(a.number)
-                    })) : []
-                }));
-            } else {
-                // Tenta reaproveitar grupos do cache anterior dessa campanha se falhar a requisição
-                const antiga = cacheCampanhas.campanhas.find(c => c.id === rel.id);
-                if (antiga && antiga.grupos && antiga.grupos.length > 0) {
-                    console.log(`   ℹ️ Mantendo ${antiga.grupos.length} grupos do cache anterior para "${rel.name}".`);
-                    gruposCampanha = antiga.grupos;
-                } else {
-                    console.warn(`   ⚠️ Não foi possível obter grupos para "${rel.name}" (Status: ${resGrupos.statusCode}).`);
-                }
-            }
-
-            totalGruposMapeados += gruposCampanha.length;
-
-            novasCampanhas.push({
+        // Preserva os grupos já cadastrados em cada campanha para NÃO bater rate-limit
+        const novasCampanhas = ativas.map(rel => {
+            const antiga = cacheCampanhas.campanhas.find(c => c.id === rel.id);
+            const gruposPreservados = (antiga && Array.isArray(antiga.grupos)) ? antiga.grupos : [];
+            return {
                 id: rel.id,
                 name: rel.name,
                 type: rel.type || 'WhatsRelease',
                 archived: false,
-                totalGrupos: gruposCampanha.length,
-                grupos: gruposCampanha
-            });
-        }
+                totalGrupos: gruposPreservados.length,
+                grupos: gruposPreservados
+            };
+        });
 
+        const totalGruposMapeados = novasCampanhas.reduce((acc, c) => acc + (c.grupos ? c.grupos.length : 0), 0);
         const agora = new Date();
         const proxima = new Date(agora.getTime() + INTERVALO_12_HORAS_MS);
 
@@ -357,11 +313,11 @@ async function sincronizarCampanhasSendflow(forcar = false) {
         salvarCampanhasLocais();
 
         statusSincronizacao.status = 'sucesso';
-        statusSincronizacao.mensagem = `Sincronização concluída com sucesso! ${novasCampanhas.length} campanhas ativas e ${totalGruposMapeados} grupos monitorados.`;
+        statusSincronizacao.mensagem = `Sincronização concluída! ${novasCampanhas.length} campanhas ativas mapeadas com segurança.`;
         statusSincronizacao.retryAfterMs = null;
         statusSincronizacao.emAndamento = false;
 
-        console.log(`\n✅ [SENDFLOW SINCRONIZADO] ${novasCampanhas.length} campanhas ativas | ${totalGruposMapeados} grupos cadastrados.`);
+        console.log(`\n✅ [SENDFLOW SINCRONIZADO] ${novasCampanhas.length} campanhas ativas mapeadas sem risco de rate limit.`);
         console.log(`⏰ Próxima sincronização automática agendada para: ${proxima.toLocaleString('pt-BR')}`);
 
         if (typeof callbackNotificacao === 'function') {
@@ -377,7 +333,145 @@ async function sincronizarCampanhasSendflow(forcar = false) {
         };
     } catch (err) {
         statusSincronizacao.status = 'erro';
-        statusSincronizacao.mensagem = `Erro interno ao sincronizar SendFlow: ${err.message}`;
+        statusSincronizacao.mensagem = `Erro ao sincronizar SendFlow: ${err.message}`;
+        statusSincronizacao.emAndamento = false;
+        console.error('[!] Erro ao sincronizar SendFlow:', err);
+        return {
+            sucesso: false,
+            mensagem: statusSincronizacao.mensagem,
+            campanhas: cacheCampanhas.campanhas
+        };
+    }
+}
+
+// Sincroniza grupos EXCLUSIVAMENTE de uma única campanha (sob demanda, seguro)
+async function sincronizarGruposCampanha(releaseId) {
+    if (!releaseId) throw new Error('ID da campanha é obrigatório.');
+    const camp = cacheCampanhas.campanhas.find(c => c.id === releaseId);
+    if (!camp) throw new Error('Campanha não encontrada no cache.');
+
+    console.log(`[🎯 SENDFLOW] Buscando grupos exclusivamente para a campanha "${camp.name}" (${camp.id})...`);
+    const resGrupos = await requestSendflow(`/releases/${releaseId}/groups`);
+
+    if (resGrupos.statusCode === 403 || resGrupos.statusCode === 429) {
+        const retryMs = resGrupos.data?.retryAfterMs || 60000;
+        const msg = `SendFlow retornou limite de taxa (Status ${resGrupos.statusCode}). Aguarde ${Math.ceil(retryMs / 1000)}s antes de tentar novamente.`;
+        console.warn(`[⚠️ SENDFLOW RATE-LIMIT] ${msg}`);
+        return {
+            sucesso: false,
+            rateLimited: true,
+            mensagem: msg,
+            grupos: camp.grupos || []
+        };
+    }
+
+    if (resGrupos.statusCode === 200 && Array.isArray(resGrupos.data)) {
+        camp.grupos = resGrupos.data.map(g => ({
+            id: g.id || g._id,
+            name: g.name || '',
+            gid: g.gid || g.jid || '',
+            jid: g.jid || g.gid || '',
+            inviteCode: g.inviteCode || '',
+            full: Boolean(g.full),
+            participantsAmount: Number(g.participantsAmount) || 0,
+            count: Number(g.count) || 0,
+            admins: Array.isArray(g.admins) ? g.admins.map(a => ({
+                name: a.name || 'Admin',
+                number: extrairNumeroLimpo(a.number)
+            })) : []
+        }));
+        camp.totalGrupos = camp.grupos.length;
+        cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
+        salvarCampanhasLocais();
+
+        return {
+            sucesso: true,
+            mensagem: `${camp.grupos.length} grupos obtidos com sucesso para "${camp.name}"!`,
+            grupos: camp.grupos,
+            total: camp.grupos.length
+        };
+    }
+
+    return {
+        sucesso: false,
+        mensagem: `Não foi possível obter grupos para "${camp.name}" (Status: ${resGrupos.statusCode}).`,
+        grupos: camp.grupos || []
+    };
+}
+
+// Adiciona um grupo manualmente a uma campanha (mesmo sem a API do Sendflow)
+function adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount }) {
+    if (!releaseId) throw new Error('ID da campanha é obrigatório.');
+    const camp = cacheCampanhas.campanhas.find(c => c.id === releaseId);
+    if (!camp) throw new Error('Campanha não encontrada no cache.');
+
+    if (!Array.isArray(camp.grupos)) camp.grupos = [];
+
+    let gidLimpo = String(gid || '').trim();
+    if (gidLimpo && !gidLimpo.includes('@g.us') && !gidLimpo.includes('http') && /^\d+$/.test(gidLimpo)) {
+        gidLimpo = `${gidLimpo}@g.us`;
+    }
+
+    const indexExistente = camp.grupos.findIndex(g => (gidLimpo && g.gid === gidLimpo) || (name && g.name === name));
+    if (indexExistente !== -1) {
+        if (name) camp.grupos[indexExistente].name = name;
+        if (gidLimpo) camp.grupos[indexExistente].gid = gidLimpo;
+        salvarCampanhasLocais();
+        return {
+            sucesso: true,
+            mensagem: 'Grupo já estava cadastrado nesta campanha. Dados atualizados!',
+            grupo: camp.grupos[indexExistente],
+            total: camp.grupos.length
+        };
+    }
+
+    const novoGrupo = {
+        id: `manual_${Date.now()}`,
+        name: (name || 'Grupo Manual').trim(),
+        gid: gidLimpo,
+        jid: gidLimpo,
+        inviteCode: '',
+        full: false,
+        participantsAmount: Number(participantsAmount) || 0,
+        origem: 'Manual'
+    };
+
+    camp.grupos.push(novoGrupo);
+    camp.totalGrupos = camp.grupos.length;
+    cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
+    salvarCampanhasLocais();
+
+    return {
+        sucesso: true,
+        mensagem: `Grupo "${novoGrupo.name}" adicionado à campanha com sucesso!`,
+        grupo: novoGrupo,
+        total: camp.grupos.length
+    };
+}
+
+// Remove um grupo de uma campanha
+function removerGrupoCampanha(releaseId, idOuGid) {
+    if (!releaseId) throw new Error('ID da campanha é obrigatório.');
+    const camp = cacheCampanhas.campanhas.find(c => c.id === releaseId);
+    if (!camp || !Array.isArray(camp.grupos)) throw new Error('Campanha não encontrada.');
+
+    const antes = camp.grupos.length;
+    camp.grupos = camp.grupos.filter(g => g.id !== idOuGid && g.gid !== idOuGid && g.jid !== idOuGid);
+
+    if (camp.grupos.length === antes) {
+        return { sucesso: false, erro: 'Grupo não encontrado nesta campanha.' };
+    }
+
+    camp.totalGrupos = camp.grupos.length;
+    cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
+    salvarCampanhasLocais();
+
+    return {
+        sucesso: true,
+        mensagem: 'Grupo removido da campanha com sucesso!',
+        total: camp.grupos.length
+    };
+}
         statusSincronizacao.emAndamento = false;
         console.error('[!] Erro interno ao sincronizar SendFlow:', err);
         return {
@@ -573,9 +667,28 @@ function obterInfoGrupoCampanha(idGrupo, subject) {
             }
         }
 
-        // 3. Fallback especial para nomes de campanhas conhecidas
+        // 3. Fallback inteligente para QUALQUER campanha ativa por tag [CÓDIGO] ou palavras-chave
         for (const camp of cacheCampanhas.campanhas) {
-            const campNameLower = camp.name.toLowerCase();
+            const campName = String(camp.name || '').trim();
+            const campNameLower = campName.toLowerCase();
+            const nomeGrupoLower = nomeLimpo.toLowerCase();
+
+            // 3.1. Se a campanha possui tag entre colchetes ex: [BV-26], [PI-NOV-26], [PES-PPE-26]
+            const tagMatch = campName.match(/\[(.*?)\]/);
+            if (tagMatch && tagMatch[1]) {
+                const tagInterna = tagMatch[1].trim().toLowerCase();
+                if (tagInterna.length >= 3 && nomeGrupoLower.includes(tagInterna)) {
+                    return {
+                        releaseId: camp.id,
+                        nomeCampanha: camp.name,
+                        idGrupo: idLimpo,
+                        nomeGrupo: nomeLimpo,
+                        campanhaObj: camp
+                    };
+                }
+            }
+
+            // 3.2. Regras personalizadas para campanhas clássicas
             if (campNameLower.includes('black') || campNameLower.includes('vitalícia') || campNameLower.includes('vitalicia')) {
                 if (/black|vital[ií]cia/i.test(nomeLimpo)) {
                     return {
@@ -589,6 +702,24 @@ function obterInfoGrupoCampanha(idGrupo, subject) {
             }
             if (campNameLower.includes('base forte')) {
                 if (/base\s*forte/i.test(nomeLimpo)) {
+                    return {
+                        releaseId: camp.id,
+                        nomeCampanha: camp.name,
+                        idGrupo: idLimpo,
+                        nomeGrupo: nomeLimpo,
+                        campanhaObj: camp
+                    };
+                }
+            }
+
+            // 3.3. Correspondência por tokens principais (ex: "inss", "tj-sp", "tjsp")
+            const tokens = campNameLower
+                .replace(/[\[\]\(\)\-_]/g, ' ')
+                .split(/\s+/)
+                .filter(t => t.length >= 4 && !['grupo', 'whats', 'release', '2026', 'pos', 'edital', 'campanha', 'mensagens'].includes(t));
+
+            for (const token of tokens) {
+                if (nomeGrupoLower.includes(token)) {
                     return {
                         releaseId: camp.id,
                         nomeCampanha: camp.name,
@@ -654,6 +785,9 @@ module.exports = {
     carregarCampanhasLocais,
     salvarCampanhasLocais,
     sincronizarCampanhasSendflow,
+    sincronizarGruposCampanha,
+    adicionarGrupoManualCampanha,
+    removerGrupoCampanha,
     iniciarAgendamento12Horas,
     obterAdmsCampanha,
     adicionarAdmCampanha,

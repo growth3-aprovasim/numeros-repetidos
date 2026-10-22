@@ -1471,12 +1471,9 @@ async function iniciarOperacaoAegisCompleta() {
     console.log(`🤖  Frota de ADMs (Administradores dos Grupos): ${qtdAdms} contas configuradas`);
     console.log('=================================================================\n');
 
-    // 1. Carregar campanhas locais do SendFlow e iniciar cron de 12 horas
+    // 1. Carregar campanhas e grupos locais do cache (protegendo a chave de API do SendFlow contra rate-limit no boot)
     carregarCampanhasLocais();
     iniciarAgendamento12Horas();
-    sincronizarCampanhasSendflow().catch(e => {
-        console.warn('[!] Sincronização em background do SendFlow:', e.message);
-    });
 
     console.log(`[+] Conectando frota de ${qtdAdms} Administradores...`);
     for (let i = 1; i <= qtdAdms; i++) {

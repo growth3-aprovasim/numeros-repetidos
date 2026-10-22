@@ -1290,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filtradas.forEach(camp => {
             const card = document.createElement('div');
-            card.className = 'campanha-card';
+            card.className = 'campanha-card brabo-card';
             card.dataset.releaseId = camp.id;
 
             const admsList = Array.isArray(camp.adms) ? camp.adms : [];
@@ -1299,100 +1299,165 @@ document.addEventListener('DOMContentLoaded', () => {
             let admsHtml = '';
             if (admsList.length > 0) {
                 admsHtml = admsList.map(adm => `
-                    <div class="adm-pill">
-                        <span class="adm-pill-name">👑 ${escapeHtml(adm.nome || 'ADM')}</span>
-                        <span class="adm-pill-phone">${escapeHtml(adm.numeroFormatado || adm.numero)}</span>
-                        <button type="button" class="btn-remove-adm-pill" data-release-id="${camp.id}" data-numero="${adm.numero}" title="Remover ADM desta campanha">
-                            ✕
+                    <div class="adm-card-item">
+                        <div class="adm-card-avatar">👑</div>
+                        <div class="adm-card-info">
+                            <span class="adm-card-nome">${escapeHtml(adm.nome || 'Administrador')}</span>
+                            <span class="adm-card-num">${escapeHtml(adm.numeroFormatado || adm.numero)}</span>
+                            <span class="adm-card-tag-imune">🛡️ IMUNE NESTA CAMPANHA</span>
+                        </div>
+                        <button type="button" class="btn-remove-adm-card" data-release-id="${camp.id}" data-numero="${adm.numero}" title="Remover ADM desta campanha">
+                            🗑️
                         </button>
                     </div>
                 `).join('');
             } else {
-                admsHtml = `<span class="adms-empty-hint">Nenhum ADM exclusivo cadastrado ainda. Adicione abaixo para que fique de olho nesta campanha.</span>`;
+                admsHtml = `
+                    <div class="adms-empty-box">
+                        <span class="empty-icon-sm">👤</span>
+                        <div class="empty-text-wrap">
+                            <span class="empty-title-sm">Nenhum ADM exclusivo cadastrado ainda</span>
+                            <span class="empty-sub-sm">Cadastre os números abaixo para ficarem de olho exclusivamente nesta campanha.</span>
+                        </div>
+                    </div>
+                `;
             }
 
             let gruposChipsHtml = '';
             if (gruposList.length > 0) {
-                gruposChipsHtml = gruposList.map(g => `
-                    <div class="grupo-chip">
-                        <div class="grupo-chip-title" title="${escapeHtml(g.name)}">${escapeHtml(g.name || 'Grupo sem nome')}</div>
-                        <div class="grupo-chip-meta">
-                            <span>ID: ${escapeHtml(g.gid ? g.gid.split('@')[0] : g.id)}</span>
-                            <span>👥 ${g.participantsAmount || 0} leads</span>
+                gruposChipsHtml = gruposList.map(g => {
+                    const idExib = g.gid ? g.gid.split('@')[0] : (g.id || 'sem-id');
+                    return `
+                        <div class="grupo-chip-card">
+                            <div class="grupo-chip-header">
+                                <span class="grupo-chip-title" title="${escapeHtml(g.name || 'Grupo sem nome')}">📁 ${escapeHtml(g.name || 'Grupo sem nome')}</span>
+                                <button type="button" class="btn-remove-group" data-release-id="${camp.id}" data-gid="${escapeHtml(g.gid || g.id)}" title="Remover grupo do monitoramento">✕</button>
+                            </div>
+                            <div class="grupo-chip-meta">
+                                <span class="meta-gid">ID: ${escapeHtml(idExib)}</span>
+                                <span class="meta-leads">👥 ${g.participantsAmount || 0} leads</span>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } else {
-                gruposChipsHtml = `<div style="color: var(--text-muted); font-size: 0.8rem; padding: 8px;">Nenhum grupo detalhado retornado pelo SendFlow para esta campanha ainda.</div>`;
+                gruposChipsHtml = `
+                    <div class="grupos-empty-hint">
+                        <span>ℹ️ Nenhum grupo cadastrado ou retornado ainda. Use os botões acima para buscar no SendFlow ou cadastrar manualmente.</span>
+                    </div>
+                `;
             }
 
             card.innerHTML = `
-                <div class="campanha-top-row">
-                    <div class="campanha-title-area">
-                        <h3 class="campanha-title">
-                            <span>🎯</span> ${escapeHtml(camp.name)}
+                <!-- TOPO DO CARD DA CAMPANHA -->
+                <div class="campanha-header-brabo">
+                    <div class="campanha-title-col">
+                        <div class="campanha-tag-bar">
+                            <span class="badge-tag badge-active-sendflow">
+                                <span class="pulsing-dot" style="width: 7px; height: 7px;"></span> ATIVA NO SENDFLOW
+                            </span>
+                            <span class="campanha-id-pill" title="Clique para copiar ID">
+                                🔑 ${escapeHtml(camp.id)}
+                            </span>
+                        </div>
+                        <h3 class="campanha-title-main">
+                            🎯 ${escapeHtml(camp.name)}
                         </h3>
-                        <span class="campanha-id-tag">ID SENDFLOW: ${escapeHtml(camp.id)}</span>
                     </div>
-                    <div class="campanha-badges-row">
-                        <span class="badge-tag badge-active-sendflow">
-                            <span class="pulsing-dot" style="width: 6px; height: 6px;"></span> Ativa
-                        </span>
-                        <span class="badge-tag badge-groups-count">
-                            📁 ${gruposList.length || camp.totalGrupos || 0} Grupos
-                        </span>
-                        <span class="badge-tag badge-adms-count">
-                            👑 ${admsList.length} ADMs
-                        </span>
+                    <div class="campanha-counters-col">
+                        <div class="counter-badge counter-adms">
+                            <span class="counter-num">${admsList.length}</span>
+                            <span class="counter-lbl">ADMs</span>
+                        </div>
+                        <div class="counter-badge counter-grupos">
+                            <span class="counter-num">${gruposList.length || camp.totalGrupos || 0}</span>
+                            <span class="counter-lbl">Grupos</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- SEÇÃO DE ADMS DA CAMPANHA -->
-                <div class="campanha-adms-box">
-                    <div class="adms-box-header">
-                        <div>
-                            <div class="adms-box-title">👑 ADMs Dedicados (Ficam de olho nesta campanha)</div>
-                            <div class="adms-box-subtitle">Números com imunidade total e responsáveis pela gestão destes grupos</div>
+                <!-- SEÇÃO 1: GESTÃO DE ADMINISTRADORES (FOCO PRINCIPAL) -->
+                <div class="campanha-adms-section">
+                    <div class="section-title-row">
+                        <div class="title-with-badge">
+                            <span class="section-icon">👑</span>
+                            <h4 class="section-title">ADMINISTRADORES DEDICADOS A ESTA CAMPANHA</h4>
+                            <span class="count-pill">${admsList.length}</span>
                         </div>
-                        <button type="button" class="btn btn-secondary btn-sm-action btn-import-adms" data-release-id="${camp.id}" title="Importar administradores detectados pelo SendFlow para esta campanha">
+                        <button type="button" class="btn-import-clean btn-import-adms" data-release-id="${camp.id}" title="Importar administradores já cadastrados no SendFlow para esta campanha">
                             📥 Importar do SendFlow
                         </button>
                     </div>
+                    <p class="section-description">
+                        Estes números possuem <strong>imunidade absoluta</strong> aos filtros da catraca nesta campanha e atuam na moderação dos grupos.
+                    </p>
 
-                    <div class="adms-pills-wrap" id="pills-camp-${camp.id}">
+                    <!-- GRID DE ADMS CADASTRADOS -->
+                    <div class="adms-grid-container" id="adms-grid-${camp.id}">
                         ${admsHtml}
                     </div>
 
-                    <!-- FORMULÁRIO RÁPIDO PARA ADICIONAR ADM NESTA CAMPANHA -->
+                    <!-- FORMULÁRIO DE CADASTRO RÁPIDO DE ADM -->
                     <form class="add-adm-inline-form" data-release-id="${camp.id}">
-                        <input 
-                            type="text" 
-                            class="form-input adm-nome-input" 
-                            placeholder="Nome do ADM (ex: Suporte Black)" 
-                            required
-                        >
-                        <input 
-                            type="tel" 
-                            class="form-input adm-tel-input" 
-                            placeholder="WhatsApp com DDD (ex: 11999999999)" 
-                            required
-                        >
-                        <button type="submit" class="btn btn-primary btn-sm-action">
-                            ➕ Adicionar ADM
-                        </button>
+                        <div class="form-row-fields">
+                            <input 
+                                type="text" 
+                                class="form-input adm-nome-input" 
+                                placeholder="Nome / Identificação do ADM (ex: Suporte BV)" 
+                                required
+                            >
+                            <input 
+                                type="tel" 
+                                class="form-input adm-tel-input" 
+                                placeholder="WhatsApp com DDD (ex: 11999998888)" 
+                                required
+                            >
+                            <button type="submit" class="btn btn-primary btn-add-adm">
+                                <span>➕</span> Salvar ADM
+                            </button>
+                        </div>
                     </form>
                 </div>
 
-                <!-- ACORDEÃO DE GRUPOS -->
-                <div class="campanha-grupos-accordion">
-                    <button type="button" class="accordion-header" data-target="content-groups-${camp.id}">
-                        <span>📁 Ver grupos vinculados no SendFlow (${gruposList.length || camp.totalGrupos || 0} grupos)</span>
-                        <span class="accordion-arrow">▼</span>
-                    </button>
-                    <div class="accordion-content" id="content-groups-${camp.id}">
-                        <div class="grupos-chips-grid">
-                            ${gruposChipsHtml}
+                <!-- SEÇÃO 2: GRUPOS MONITORADOS DA CAMPANHA -->
+                <div class="campanha-grupos-section">
+                    <div class="section-title-row">
+                        <div class="title-with-badge">
+                            <span class="section-icon">📁</span>
+                            <h4 class="section-title">GRUPOS MONITORADOS NO RADAR</h4>
+                            <span class="count-pill">${gruposList.length || camp.totalGrupos || 0}</span>
                         </div>
+                        <div class="grupos-action-btns">
+                            <button type="button" class="btn-action-outline btn-sync-single-group" data-release-id="${camp.id}" title="Consultar grupos desta campanha na API do SendFlow com segurança">
+                                🔄 Buscar no SendFlow
+                            </button>
+                            <button type="button" class="btn-action-outline btn-toggle-add-group" data-release-id="${camp.id}" title="Adicionar grupo manualmente por ID ou nome">
+                                ➕ Grupo Manual
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- FORMULÁRIO OCULTO PARA ADICIONAR GRUPO MANUALMENTE -->
+                    <form class="form-add-manual-group" id="form-group-manual-${camp.id}" data-release-id="${camp.id}" style="display: none;">
+                        <input 
+                            type="text" 
+                            class="form-input group-name-input" 
+                            placeholder="Nome do grupo (ex: Desconto Black #12)" 
+                            required
+                        >
+                        <input 
+                            type="text" 
+                            class="form-input group-gid-input" 
+                            placeholder="ID do grupo (ex: 120363xxx@g.us) ou Link"
+                        >
+                        <button type="submit" class="btn btn-secondary btn-sm-action">
+                            Vincular Grupo
+                        </button>
+                    </form>
+
+                    <!-- ACCORDION / LISTA DE GRUPOS -->
+                    <div class="grupos-chips-grid">
+                        ${gruposChipsHtml}
                     </div>
                 </div>
             `;
@@ -1404,23 +1469,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function vincularEventosCardsCampanhas() {
-        document.querySelectorAll('.accordion-header').forEach(header => {
-            header.onclick = () => {
-                const targetId = header.dataset.target;
-                const content = document.getElementById(targetId);
-                if (!content) return;
-                const isOpen = content.classList.contains('open');
-                content.classList.toggle('open', !isOpen);
-                header.classList.toggle('open', !isOpen);
-            };
-        });
-
+        // 1. Cadastrar ADM na campanha
         document.querySelectorAll('.add-adm-inline-form').forEach(form => {
             form.onsubmit = async (e) => {
                 e.preventDefault();
                 const releaseId = form.dataset.releaseId;
                 const nomeInput = form.querySelector('.adm-nome-input');
                 const telInput = form.querySelector('.adm-tel-input');
+                const submitBtn = form.querySelector('button[type="submit"]');
                 const nome = nomeInput.value.trim();
                 const numero = telInput.value.trim();
 
@@ -1430,6 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
+                    submitBtn.disabled = true;
                     showToast('Cadastrando ADM na campanha...');
                     const res = await fetch(`/api/sendflow/campanhas/${releaseId}/adms`, {
                         method: 'POST',
@@ -1447,11 +1504,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (err) {
                     showToast('Falha na comunicação com o servidor.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
                 }
             };
         });
 
-        document.querySelectorAll('.btn-remove-adm-pill').forEach(btn => {
+        // 2. Remover ADM da campanha
+        document.querySelectorAll('.btn-remove-adm-card').forEach(btn => {
             btn.onclick = async () => {
                 const releaseId = btn.dataset.releaseId;
                 const numero = btn.dataset.numero;
@@ -1475,10 +1535,12 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
 
+        // 3. Importar administradores do SendFlow para a campanha
         document.querySelectorAll('.btn-import-adms').forEach(btn => {
             btn.onclick = async () => {
                 const releaseId = btn.dataset.releaseId;
                 try {
+                    btn.disabled = true;
                     showToast('Importando administradores do SendFlow...');
                     const res = await fetch(`/api/sendflow/campanhas/${releaseId}/importar-adms`, {
                         method: 'POST'
@@ -1492,6 +1554,111 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } catch (err) {
                     showToast('Erro ao importar admins do SendFlow.', 'error');
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+        });
+
+        // 4. Buscar Grupos exclusivamente para ESTA campanha no SendFlow (seguro, sem rate limit)
+        document.querySelectorAll('.btn-sync-single-group').forEach(btn => {
+            btn.onclick = async () => {
+                const releaseId = btn.dataset.releaseId;
+                const textoOriginal = btn.innerHTML;
+                try {
+                    btn.disabled = true;
+                    btn.innerHTML = '⏳ Buscando...';
+                    showToast('Consultando grupos desta campanha no SendFlow...');
+                    const res = await fetch(`/api/sendflow/campanhas/${releaseId}/sincronizar-grupos`, {
+                        method: 'POST'
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || 'Grupos atualizados com sucesso!');
+                        await carregarCampanhasSendflow();
+                    } else if (data.rateLimited) {
+                        showToast(data.mensagem || 'SendFlow com limite momentâneo. Aguarde um minuto.', 'warning');
+                    } else {
+                        showToast(data.mensagem || data.erro || 'Falha ao obter grupos.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Erro ao sincronizar grupos desta campanha.', 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = textoOriginal;
+                }
+            };
+        });
+
+        // 5. Alternar formulário para adicionar grupo manual
+        document.querySelectorAll('.btn-toggle-add-group').forEach(btn => {
+            btn.onclick = () => {
+                const releaseId = btn.dataset.releaseId;
+                const form = document.getElementById(`form-group-manual-${releaseId}`);
+                if (!form) return;
+                const estaVisivel = form.style.display !== 'none';
+                form.style.display = estaVisivel ? 'none' : 'flex';
+                if (!estaVisivel) {
+                    const inp = form.querySelector('.group-name-input');
+                    if (inp) inp.focus();
+                }
+            };
+        });
+
+        // 6. Cadastrar grupo manual na campanha
+        document.querySelectorAll('.form-add-manual-group').forEach(form => {
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                const releaseId = form.dataset.releaseId;
+                const nameInput = form.querySelector('.group-name-input');
+                const gidInput = form.querySelector('.group-gid-input');
+                const name = nameInput.value.trim();
+                const gid = gidInput.value.trim();
+
+                try {
+                    showToast('Cadastrando grupo na campanha...');
+                    const res = await fetch(`/api/sendflow/campanhas/${releaseId}/grupos`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, gid })
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || 'Grupo cadastrado com sucesso!');
+                        nameInput.value = '';
+                        gidInput.value = '';
+                        form.style.display = 'none';
+                        await carregarCampanhasSendflow();
+                    } else {
+                        showToast(data.erro || 'Erro ao cadastrar grupo.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Falha na comunicação com o servidor.', 'error');
+                }
+            };
+        });
+
+        // 7. Remover grupo da campanha
+        document.querySelectorAll('.btn-remove-group').forEach(btn => {
+            btn.onclick = async () => {
+                const releaseId = btn.dataset.releaseId;
+                const gid = btn.dataset.gid;
+                if (!confirm('Deseja remover este grupo do monitoramento desta campanha?')) return;
+
+                try {
+                    showToast('Removendo grupo...');
+                    const res = await fetch(`/api/sendflow/campanhas/${releaseId}/grupos/${encodeURIComponent(gid)}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || 'Grupo removido com sucesso!');
+                        await carregarCampanhasSendflow();
+                    } else {
+                        showToast(data.erro || 'Falha ao remover grupo.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Erro ao remover grupo.', 'error');
                 }
             };
         });

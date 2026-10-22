@@ -30,6 +30,9 @@ const {
 
 const {
     sincronizarCampanhasSendflow,
+    sincronizarGruposCampanha,
+    adicionarGrupoManualCampanha,
+    removerGrupoCampanha,
     obterDadosCompletosCampanhas,
     adicionarAdmCampanha,
     removerAdmCampanha,
@@ -542,6 +545,46 @@ app.post('/api/sendflow/campanhas/:releaseId/importar-adms', (req, res) => {
         res.json(resultado);
     } catch (err) {
         res.status(400).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Sincronizar grupos EXCLUSIVAMENTE para uma campanha específica (evita rate limit)
+app.post('/api/sendflow/campanhas/:releaseId/sincronizar-grupos', async (req, res) => {
+    try {
+        const { releaseId } = req.params;
+        const resultado = await sincronizarGruposCampanha(releaseId);
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Adicionar grupo manualmente a uma campanha
+app.post('/api/sendflow/campanhas/:releaseId/grupos', (req, res) => {
+    try {
+        const { releaseId } = req.params;
+        const { gid, name, participantsAmount } = req.body;
+        if (!gid && !name) {
+            return res.status(400).json({ sucesso: false, erro: 'Informe o ID/Link ou Nome do grupo.' });
+        }
+        const resultado = adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount });
+        res.json(resultado);
+    } catch (err) {
+        res.status(400).json({ sucesso: false, erro: err.message });
+    }
+});
+
+// Remover grupo de uma campanha
+app.delete('/api/sendflow/campanhas/:releaseId/grupos/:gid', (req, res) => {
+    try {
+        const { releaseId, gid } = req.params;
+        const resultado = removerGrupoCampanha(releaseId, gid);
+        if (!resultado.sucesso) {
+            return res.status(404).json(resultado);
+        }
+        res.json(resultado);
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
     }
 });
 
