@@ -1699,6 +1699,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Alternador de layout dos cards de campanhas (Lado a lado, 2 colunas, 3 colunas, 1 coluna)
+    const layoutToggles = document.querySelectorAll('#campanhas-layout-toggles .btn-layout-toggle');
+    if (layoutToggles.length > 0 && containerCampanhasLista) {
+        layoutToggles.forEach(btn => {
+            btn.addEventListener('click', () => {
+                layoutToggles.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const cols = btn.dataset.cols;
+                containerCampanhasLista.classList.remove('grid-cols-1', 'grid-cols-2', 'grid-cols-3');
+                if (cols === '1') containerCampanhasLista.classList.add('grid-cols-1');
+                else if (cols === '2') containerCampanhasLista.classList.add('grid-cols-2');
+                else if (cols === '3') containerCampanhasLista.classList.add('grid-cols-3');
+                localStorage.setItem('aegis_campanhas_layout', cols);
+            });
+        });
+
+        const layoutSalvo = localStorage.getItem('aegis_campanhas_layout') || 'auto';
+        const btnSalvo = document.querySelector(`#campanhas-layout-toggles .btn-layout-toggle[data-cols="${layoutSalvo}"]`);
+        if (btnSalvo) btnSalvo.click();
+    }
+
     // =================================================================
     // 📊 STATUS GERAL DO SERVIDOR E TELEMETRIA
     // =================================================================

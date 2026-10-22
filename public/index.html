@@ -187,8 +187,8 @@
 
                         <div class="sync-status-alert" id="sync-status-msg" style="display: none;"></div>
 
-                        <!-- BARRA DE FILTRO / PESQUISA DE CAMPANHAS -->
-                        <div class="campanhas-search-bar">
+                        <!-- BARRA DE FILTRO & ALTERNADOR DE LAYOUT (LADO A LADO) -->
+                        <div class="campanhas-search-bar-row">
                             <div class="search-input-wrapper">
                                 <span class="search-icon">🔍</span>
                                 <input 
@@ -197,6 +197,20 @@
                                     class="form-input search-input" 
                                     placeholder="Filtrar campanhas ativas por nome ou ID..."
                                 >
+                            </div>
+                            <div class="grid-layout-toggles" id="campanhas-layout-toggles">
+                                <button type="button" class="btn-layout-toggle active" data-cols="auto" title="Grade Adaptativa (Lado a lado)">
+                                    ⊞ Lado a Lado
+                                </button>
+                                <button type="button" class="btn-layout-toggle" data-cols="2" title="Forçar 2 Colunas Lado a Lado">
+                                    2 Colunas
+                                </button>
+                                <button type="button" class="btn-layout-toggle" data-cols="3" title="Forçar 3 Colunas">
+                                    3 Colunas
+                                </button>
+                                <button type="button" class="btn-layout-toggle" data-cols="1" title="Visualização em Lista">
+                                    ☰ 1 Coluna
+                                </button>
                             </div>
                         </div>
                     </section>

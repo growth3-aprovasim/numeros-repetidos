@@ -99,7 +99,8 @@ body {
 .app-container {
     position: relative;
     z-index: 1;
-    max-width: 1420px;
+    max-width: 1720px;
+    width: 96%;
     margin: 0 auto;
     padding: 24px 20px 48px;
     display: flex;
@@ -340,12 +341,12 @@ body {
    ===================================================================== */
 .main-content-grid {
     display: grid;
-    grid-template-columns: 480px 1fr;
+    grid-template-columns: minmax(0, 1fr) 390px;
     gap: 24px;
     align-items: start;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1200px) {
     .main-content-grid {
         grid-template-columns: 1fr;
     }
@@ -1731,11 +1732,78 @@ body {
     padding-left: 42px;
 }
 
-.campanhas-cards-list {
+.campanhas-search-bar-row {
     display: flex;
-    flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.campanhas-search-bar-row .search-input-wrapper {
+    flex: 1;
+    min-width: 260px;
+}
+
+.grid-layout-toggles {
+    display: flex;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 3px;
+}
+
+.btn-layout-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.btn-layout-toggle:hover {
+    color: var(--text-primary);
+}
+
+.btn-layout-toggle.active {
+    background: rgba(6, 182, 212, 0.2);
+    color: #67e8f9;
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+}
+
+/* DISTRIBUIÇÃO EM GRADE (LADO A LADO) DOS CARDS DE CAMPANHA */
+.campanhas-cards-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 20px;
     margin-top: 18px;
+    align-items: stretch;
+}
+
+.campanhas-cards-list.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.campanhas-cards-list.grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.campanhas-cards-list.grid-cols-1 {
+    grid-template-columns: 1fr;
+}
+
+@media (max-width: 1024px) {
+    .campanhas-cards-list,
+    .campanhas-cards-list.grid-cols-2,
+    .campanhas-cards-list.grid-cols-3 {
+        grid-template-columns: 1fr;
+    }
 }
 
 .campanhas-loading-state,
