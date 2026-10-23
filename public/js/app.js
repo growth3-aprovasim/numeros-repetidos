@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     let listaAdminsCache = [];
     let listaBlacklistCache = [];
+    let listaCrocodilosCache = [];
     let listaEspioesCache = [];
     let listaCampanhasCache = [];
     let configCache = { limiteGruposPorCampanha: 4, quantidadeEspioes: 4, limiteBanPermanente: 10 };
@@ -80,7 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Carrega dados sob demanda se necessário
             if (targetView === 'campanhas') carregarCampanhasSendflow();
             if (targetView === 'espioes') carregarEspioes();
-            if (targetView === 'blacklist') carregarBlacklist();
+            if (targetView === 'blacklist') {
+                carregarBlacklist();
+                carregarCrocodilos();
+            }
             if (targetView === 'config') carregarConfiguracoes();
         });
     });
@@ -1217,23 +1221,174 @@ document.addEventListener('DOMContentLoaded', () => {
         modalUnbanConfirmBtn.textContent = 'Desbanindo...';
 
         try {
-            const res = await fetch(`/api/blacklist/${numeroParaDesbanir}`, { method: 'DELETE' });
+            const res = await fetch(`/api/blacklist/${encodeURIComponent(numeroParaDesbanir)}`, { method: 'DELETE' });
             const data = await res.json();
             if (data.sucesso) {
-                showToast(data.mensagem);
+                showToast(data.mensagem || `Número ${numeroParaDesbanir} desbanido com sucesso!`);
                 modalUnbanConfirm.style.display = 'none';
                 numeroParaDesbanir = null;
-                await carregarBlacklist();
+                await Promise.all([
+                    carregarBlacklist(),
+                    carregarCrocodilos()
+                ]);
             } else {
-                showToast(data.erro || 'Falha ao desbanir.', 'error');
+                // Tenta fallback POST caso o proxy ou navegador bloqueie DELETE
+                const fallbackRes = await fetch(`/api/blacklist/${encodeURIComponent(numeroParaDesbanir)}/desbanir`, { method: 'POST' });
+                const fallbackData = await fallbackRes.json();
+                if (fallbackData.sucesso) {
+                    showToast(fallbackData.mensagem || `Número ${numeroParaDesbanir} desbanido com sucesso!`);
+                    modalUnbanConfirm.style.display = 'none';
+                    numeroParaDesbanir = null;
+                    await Promise.all([
+                        carregarBlacklist(),
+                        carregarCrocodilos()
+                    ]);
+                } else {
+                    showToast(fallbackData.erro || data.erro || 'Falha ao desbanir.', 'error');
+                }
             }
         } catch (e) {
-            showToast('Erro de comunicação.', 'error');
+            console.error('[!] Erro ao desbanir:', e);
+            showToast('Erro de comunicação ao desbanir.', 'error');
         } finally {
             modalUnbanConfirmBtn.disabled = false;
             modalUnbanConfirmBtn.textContent = 'Sim, Desbanir';
         }
     });
+
+    // =================================================================
+    // 🐊 SUBMÓDULO: CROCODILOS KELVEN (LEADS COM > 4 GRUPOS)
+    // Mantém apenas o 1º grupo acessado e remove dos demais
+    // =================================================================
+    const crocodilosItemsContainer = document.getElementById('crocodilos-items-container');
+    const inputSearchCrocodilos = document.getElementById('input-search-crocodilos');
+    const btnClearSearchCrocodilos = document.getElementById('btn-clear-search-crocodilos');
+    const badgeTotalCrocodilos = document.getElementById('badge-total-crocodilos');
+
+    async function carregarCrocodilos() {
+        if (!crocodilosItemsContainer) return;
+        try {
+            const res = await fetch('/api/crocodilos');
+            const data = await res.json();
+            if (data.sucesso) {
+                listaCrocodilosCache = data.crocodilos || [];
+                renderizarListaCrocodilos(listaCrocodilosCache);
+                if (badgeTotalCrocodilos) {
+                    badgeTotalCrocodilos.textContent = listaCrocodilosCache.length;
+                }
+            }
+        } catch (e) {
+            console.error('[!] Erro ao carregar Crocodilos Kelven:', e);
+        }
+    }
+
+    function renderizarListaCrocodilos(lista) {
+        if (!crocodilosItemsContainer) return;
+
+        if (!lista || lista.length === 0) {
+            crocodilosItemsContainer.innerHTML = `
+                <div class="empty-state">
+                    <span class="empty-icon">🐊</span>
+                    <p class="empty-title">Nenhum Crocodilo Kelven detectado</p>
+                    <p class="empty-subtitle">Leads que ultrapassarem o limite de 4 grupos na mesma campanha serão mantidos apenas no 1º grupo e listados aqui.</p>
+                </div>
+            `;
+            return;
+        }
+
+        crocodilosItemsContainer.innerHTML = '';
+        lista.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'blacklist-item';
+            row.id = `crocodilo-row-${item.numero}`;
+
+            const dataFormatada = item.dataDeteccao
+                ? new Date(item.dataDeteccao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'Data não registrada';
+
+            const campInfo = item.nomeCampanha || item.idCampanha || 'Campanha Ativa';
+            const gruposRemovidosCount = Array.isArray(item.gruposRemovidos) ? item.gruposRemovidos.length : 0;
+            const primeiroGrupoInfo = item.nomePrimeiroGrupo || item.primeiroGrupoId || 'Grupo Primário #1';
+
+            row.innerHTML = `
+                <div class="blacklist-item-info">
+                    <div class="blacklist-num-row">
+                        <span class="blacklist-num">${escapeHtml(item.numeroFormatado || '+' + item.numero)}</span>
+                        <span class="badge-role" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">🐊 CROCODILO KELVEN</span>
+                        <span class="badge-tag-campanha" style="margin-left: 6px;">${escapeHtml(campInfo)}</span>
+                    </div>
+                    <span class="blacklist-reason" style="color: #38bdf8;">
+                        🏠 <strong>1º Grupo Mantido:</strong> ${escapeHtml(primeiroGrupoInfo)}
+                    </span>
+                    <span class="blacklist-reason" style="color: #f87171; font-size: 0.8rem;">
+                        🚫 <strong>${gruposRemovidosCount} grupo(s) excedente(s) removido(s)</strong> automaticamente.
+                    </span>
+                    <span class="blacklist-date">Detectado em: ${escapeHtml(dataFormatada)}</span>
+                </div>
+                <div class="admin-item-actions">
+                    <button class="btn btn-sm btn-outline btn-remover-crocodilo" data-numero="${escapeHtml(item.numero)}" title="Liberar este lead da lista de Crocodilos">
+                        ✨ Liberar Lead
+                    </button>
+                </div>
+            `;
+            crocodilosItemsContainer.appendChild(row);
+        });
+
+        // Eventos dos botões de liberar
+        crocodilosItemsContainer.querySelectorAll('.btn-remover-crocodilo').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const num = e.currentTarget.dataset.numero;
+                if (!num) return;
+                const confirmar = confirm(`Deseja liberar o lead ${num} da lista de Crocodilos Kelven?`);
+                if (!confirmar) return;
+
+                try {
+                    const res = await fetch(`/api/crocodilos/${encodeURIComponent(num)}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.sucesso) {
+                        showToast(data.mensagem || `Lead ${num} liberado com sucesso!`);
+                        await carregarCrocodilos();
+                    } else {
+                        showToast(data.erro || 'Erro ao liberar lead.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Erro de comunicação.', 'error');
+                }
+            });
+        });
+    }
+
+    if (inputSearchCrocodilos) {
+        inputSearchCrocodilos.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase().trim();
+            if (btnClearSearchCrocodilos) {
+                btnClearSearchCrocodilos.style.display = termo ? 'block' : 'none';
+            }
+
+            if (!termo) {
+                renderizarListaCrocodilos(listaCrocodilosCache);
+                return;
+            }
+
+            const termoLimpo = termo.replace(/\D/g, '');
+            const filtrados = listaCrocodilosCache.filter(item => {
+                const num = String(item.numero || '');
+                const camp = String(item.nomeCampanha || item.idCampanha || '').toLowerCase();
+                const grupo = String(item.nomePrimeiroGrupo || '').toLowerCase();
+                return (termoLimpo && num.includes(termoLimpo)) || camp.includes(termo) || grupo.includes(termo);
+            });
+
+            renderizarListaCrocodilos(filtrados);
+        });
+    }
+
+    if (btnClearSearchCrocodilos) {
+        btnClearSearchCrocodilos.addEventListener('click', () => {
+            if (inputSearchCrocodilos) inputSearchCrocodilos.value = '';
+            btnClearSearchCrocodilos.style.display = 'none';
+            renderizarListaCrocodilos(listaCrocodilosCache);
+        });
+    }
 
     // =================================================================
     // ⚙️ MÓDULO 4: CONFIGURAÇÕES & LIMITES DO SISTEMA
@@ -1974,6 +2129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             carregarWhitelist(),
             carregarEspioes(),
             carregarBlacklist(),
+            carregarCrocodilos(),
             carregarConfiguracoes(),
             carregarFeedEventos()
         ]);
@@ -1988,6 +2144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarWhitelist();
     carregarEspioes();
     carregarBlacklist();
+    carregarCrocodilos();
     carregarConfiguracoes();
     carregarFeedEventos();
 

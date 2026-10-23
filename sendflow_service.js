@@ -7,8 +7,9 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const ARQUIVO_CAMPANHAS = path.join(__dirname, 'sendflow_campanhas_ativas.json');
-const ARQUIVO_CAMPANHAS_ADMS = path.join(__dirname, 'campanhas_adms.json');
+const DATA_DIR = process.env.DATA_DIR || (fs.existsSync(path.join(__dirname, 'data')) ? path.join(__dirname, 'data') : __dirname);
+const ARQUIVO_CAMPANHAS = path.join(DATA_DIR, 'sendflow_campanhas_ativas.json');
+const ARQUIVO_CAMPANHAS_ADMS = path.join(DATA_DIR, 'campanhas_adms.json');
 
 const SENDFLOW_API_KEY = process.env.SENDFLOW_API_KEY || '';
 const BASE_URL = process.env.SENDFLOW_BASE_URL || 'https://sendflow.pro/sendapi';

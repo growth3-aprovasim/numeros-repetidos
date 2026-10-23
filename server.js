@@ -19,6 +19,11 @@ const {
     salvarBlacklist,
     estaNaBlacklist,
     banirPermanente,
+    desbanir,
+    carregarCrocodilos,
+    removerCrocodilo,
+    autoSalvarBackupSessoes,
+    DATA_DIR,
     obterStatusAdms,
     obterStatusAdmsPorCampanha,
     adicionarSniperCampanha,
@@ -47,11 +52,12 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Arquivos de dados persistentes
-const ARQUIVO_WHITELIST = path.join(__dirname, 'whitelist_aegis.json');
-const ARQUIVO_METADATA = path.join(__dirname, 'whitelist_metadata.json');
-const ARQUIVO_BLACKLIST = path.join(__dirname, 'blacklist_aegis.json');
-const ARQUIVO_CONFIG = path.join(__dirname, 'config_aegis.json');
+// Arquivos de dados persistentes (respeitando DATA_DIR para o Easypanel)
+const ARQUIVO_WHITELIST = path.join(DATA_DIR, 'whitelist_aegis.json');
+const ARQUIVO_METADATA = path.join(DATA_DIR, 'whitelist_metadata.json');
+const ARQUIVO_BLACKLIST = path.join(DATA_DIR, 'blacklist_aegis.json');
+const ARQUIVO_CONFIG = path.join(DATA_DIR, 'config_aegis.json');
+const ARQUIVO_CROCODILOS = path.join(DATA_DIR, 'crocodilos_kelven.json');
 
 // Middlewares
 app.use(express.json({ limit: '10mb' }));
@@ -357,9 +363,13 @@ app.post('/api/blacklist', async (req, res) => {
     }
 });
 
-app.delete('/api/blacklist/:numero', (req, res) => {
+const desbanirHandler = (req, res) => {
     try {
-        const resultado = desbanir(req.params.numero);
+        const numAlvo = req.params.numero || req.body?.numero;
+        if (!numAlvo) {
+            return res.status(400).json({ sucesso: false, erro: 'Número de telefone não informado.' });
+        }
+        const resultado = desbanir(numAlvo);
         if (!resultado.sucesso) {
             return res.status(404).json(resultado);
         }
@@ -367,7 +377,45 @@ app.delete('/api/blacklist/:numero', (req, res) => {
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
     }
+};
+
+app.delete('/api/blacklist/:numero', desbanirHandler);
+app.post('/api/blacklist/:numero/desbanir', desbanirHandler);
+app.post('/api/blacklist/desbanir', desbanirHandler);
+
+// 🐊 ROTAS: CROCODILOS KELVEN (LEADS COM > 4 GRUPOS)
+app.get('/api/crocodilos', (req, res) => {
+    try {
+        const crocodilos = carregarCrocodilos();
+        res.json({
+            sucesso: true,
+            total: crocodilos.length,
+            crocodilos
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
 });
+
+const removerCrocodiloHandler = (req, res) => {
+    try {
+        const numAlvo = req.params.numero || req.body?.numero;
+        if (!numAlvo) {
+            return res.status(400).json({ sucesso: false, erro: 'Número não informado.' });
+        }
+        const ok = removerCrocodilo(numAlvo);
+        if (!ok) {
+            return res.status(404).json({ sucesso: false, erro: 'Número não encontrado na lista de Crocodilos Kelven.' });
+        }
+        res.json({ sucesso: true, mensagem: `Número ${formatarExibicao(numAlvo)} removido da lista de Crocodilos.` });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+};
+
+app.delete('/api/crocodilos/:numero', removerCrocodiloHandler);
+app.post('/api/crocodilos/:numero/remover', removerCrocodiloHandler);
+app.post('/api/crocodilos/remover', removerCrocodiloHandler);
 
 // =====================================================================
 // 📡 ROTAS DE API: WHITELIST & ADMINS
@@ -801,8 +849,56 @@ app.post('/api/snipers/conectar', (req, res) => {
 });
 
 // =====================================================================
+// 📦 AUTO-RESTAURAÇÃO DE SESSÕES & DADOS ANTES DO BOOT (ANTI-PERDA DE DEPLOY)
+// =====================================================================
+function autoRestaurarSessoesSeNecessario() {
+    try {
+        const zipCandidatos = [
+            path.join(DATA_DIR, 'aegis_sessoes_snipers.zip'),
+            path.join(__dirname, 'aegis_sessoes_snipers.zip')
+        ];
+        const zipFile = zipCandidatos.find(z => fs.existsSync(z));
+        if (!zipFile) return;
+
+        // Verifica se há alguma pasta auth_sniper_* com credenciais válidas
+        let temSessao = false;
+        const scanDirs = [DATA_DIR, __dirname];
+        for (const dir of scanDirs) {
+            if (!fs.existsSync(dir)) continue;
+            for (const item of fs.readdirSync(dir)) {
+                if (item.startsWith('auth_sniper_')) {
+                    const fullP = path.join(dir, item);
+                    if (fs.statSync(fullP).isDirectory() && fs.existsSync(path.join(fullP, 'creds.json'))) {
+                        temSessao = true;
+                        break;
+                    }
+                }
+            }
+            if (temSessao) break;
+        }
+
+        if (!temSessao) {
+            console.log(`[📦 AUTO-RESTORE] Restaurando credenciais salvas de "${path.basename(zipFile)}"...`);
+            const zip = new AdmZip(zipFile);
+            zip.extractAllTo(DATA_DIR, true);
+            if (DATA_DIR !== __dirname) {
+                zip.extractAllTo(__dirname, true);
+            }
+            recarregarWhitelist();
+            carregarBlacklist();
+            carregarConfig();
+            console.log('✅ [AUTO-RESTORE] Sessões e arquivos de dados restaurados com sucesso antes do boot!');
+        }
+    } catch (err) {
+        console.error('[!] Erro no auto-restore de sessões:', err.message);
+    }
+}
+
+// =====================================================================
 // 🚀 INICIALIZAÇÃO DO SERVIDOR WEB + MOTOR AEGIS
 // =====================================================================
+autoRestaurarSessoesSeNecessario();
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log('\n=================================================================');
     console.log(`🌐 [AEGIS C2] PAINEL WEB ATIVO NA PORTA: http://0.0.0.0:${PORT}`);

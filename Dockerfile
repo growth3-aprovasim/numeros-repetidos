@@ -28,9 +28,14 @@ RUN npm install --omit=dev
 # Copia todo o código da aplicação
 COPY . .
 
-# Variáveis de ambiente padrão
+# Variáveis de ambiente padrão e diretório persistente
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV DATA_DIR=/app/data
+
+# Cria diretório de dados persistentes para o Easypanel
+RUN mkdir -p /app/data
+VOLUME ["/app/data"]
 
 # Porta do Painel Web para o Easypanel
 EXPOSE 3000

@@ -64,13 +64,53 @@ process.on('uncaughtException', err => { if (!silenciador([err])) console.error(
 process.on('unhandledRejection', err => { if (!silenciador([err])) console.error('\n[💀 REJEIÇÃO NÃO TRATADA]', err?.message || err); });
 
 // =====================================================================
-// ⚙️ CONFIGURAÇÕES & ARQUIVOS PERSISTENTES
+// ⚙️ CONFIGURAÇÕES & ARQUIVOS PERSISTENTES (EASYPANEL & DOCKER READY)
 // =====================================================================
-const ARQUIVO_CONFIG = path.join(__dirname, 'config_aegis.json');
-const ARQUIVO_WHITELIST = path.join(__dirname, 'whitelist_aegis.json');
-const ARQUIVO_BLACKLIST = path.join(__dirname, 'blacklist_aegis.json');
-const ARQUIVO_LOG = path.join(__dirname, 'log_operacao_aegis.json');
-const ARQUIVO_SNIPERS_CAMPANHAS = path.join(__dirname, 'snipers_campanhas.json');
+const DATA_DIR = process.env.DATA_DIR || (fs.existsSync(path.join(__dirname, 'data')) ? path.join(__dirname, 'data') : __dirname);
+if (!fs.existsSync(DATA_DIR)) {
+    try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { }
+}
+
+// Migração suave de arquivos existentes para DATA_DIR (se DATA_DIR for /app/data ou customizado)
+if (DATA_DIR !== __dirname) {
+    try {
+        const arqsParaMigrar = [
+            'config_aegis.json', 'whitelist_aegis.json', 'whitelist_metadata.json',
+            'blacklist_aegis.json', 'crocodilos_kelven.json', 'snipers_campanhas.json',
+            'campanhas_adms.json', 'sendflow_campanhas_ativas.json', 'aegis_sessoes_snipers.zip'
+        ];
+        for (const arq of arqsParaMigrar) {
+            const origem = path.join(__dirname, arq);
+            const destino = path.join(DATA_DIR, arq);
+            if (fs.existsSync(origem) && !fs.existsSync(destino)) {
+                fs.copyFileSync(origem, destino);
+            }
+        }
+        for (const item of fs.readdirSync(__dirname)) {
+            if (item.startsWith('auth_sniper_') && fs.statSync(path.join(__dirname, item)).isDirectory()) {
+                const destinoPasta = path.join(DATA_DIR, item);
+                if (!fs.existsSync(destinoPasta)) {
+                    fs.cpSync(path.join(__dirname, item), destinoPasta, { recursive: true });
+                }
+            }
+        }
+    } catch (e) { }
+}
+
+const ARQUIVO_CONFIG = path.join(DATA_DIR, 'config_aegis.json');
+const ARQUIVO_WHITELIST = path.join(DATA_DIR, 'whitelist_aegis.json');
+const ARQUIVO_BLACKLIST = path.join(DATA_DIR, 'blacklist_aegis.json');
+const ARQUIVO_CROCODILOS = path.join(DATA_DIR, 'crocodilos_kelven.json');
+const ARQUIVO_LOG = path.join(DATA_DIR, 'log_operacao_aegis.json');
+const ARQUIVO_SNIPERS_CAMPANHAS = path.join(DATA_DIR, 'snipers_campanhas.json');
+
+function obterPastaAuth(indice) {
+    const pastaCustom = path.join(DATA_DIR, `auth_sniper_${indice}`);
+    if (fs.existsSync(pastaCustom)) return pastaCustom;
+    const pastaLocal = path.join(__dirname, `auth_sniper_${indice}`);
+    if (fs.existsSync(pastaLocal)) return pastaLocal;
+    return pastaCustom;
+}
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -379,6 +419,162 @@ function estaNaBlacklist(numOuJid) {
 }
 
 // =====================================================================
+// 🐊 GESTÃO DA LISTA "CROCODILO KELVEN" (LEADS COM > 4 GRUPOS)
+// Regra: "se eu estiver acima de 4 grupos, deve ser removido de todos os grupos,
+// ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU, e entra na lista dos Crocodilo Kelven"
+// =====================================================================
+function carregarCrocodilos() {
+    try {
+        if (fs.existsSync(ARQUIVO_CROCODILOS)) {
+            const raw = JSON.parse(fs.readFileSync(ARQUIVO_CROCODILOS, 'utf-8'));
+            if (Array.isArray(raw)) return raw;
+        }
+    } catch (e) {
+        console.error('[!] Erro ao carregar crocodilos_kelven.json:', e.message);
+    }
+    return [];
+}
+
+let cacheCrocodilos = carregarCrocodilos();
+
+function salvarCrocodilos(lista) {
+    try {
+        fs.writeFileSync(ARQUIVO_CROCODILOS, JSON.stringify(lista, null, 2), 'utf-8');
+        cacheCrocodilos = lista;
+    } catch (e) {
+        console.error('[!] Erro ao salvar crocodilos_kelven.json:', e.message);
+    }
+    return lista;
+}
+
+function obterCrocodilo(numOuJid, idCampanha = null) {
+    if (!numOuJid) return null;
+    const numLimpo = extrairNumeroLimpo(numOuJid);
+    const idNorm = normalizarID(numLimpo);
+
+    if (!cacheCrocodilos || cacheCrocodilos.length === 0) {
+        cacheCrocodilos = carregarCrocodilos();
+    }
+
+    // 1. Procura com match exato ou normalizado
+    let crocodiloEncontrado = null;
+    for (const c of cacheCrocodilos) {
+        const cNum = extrairNumeroLimpo(c.numero);
+        const matchNum = cNum === numLimpo || (idNorm && normalizarID(cNum) === idNorm) ||
+            (numLimpo.length >= 10 && cNum.length >= 10 && (cNum.includes(numLimpo) || numLimpo.includes(cNum)));
+
+        if (matchNum) {
+            // Se tiver match com a mesma campanha, retorna imediatamente
+            if (idCampanha && c.idCampanha && c.idCampanha === idCampanha) {
+                return c;
+            }
+            if (!crocodiloEncontrado) {
+                crocodiloEncontrado = c;
+            }
+        }
+    }
+
+    // Retorna o crocodilo encontrado mesmo que de outra campanha (pois ele só tem permissão de estar em 1 grupo)
+    return crocodiloEncontrado;
+}
+
+function registrarCrocodilo({ numero, idCampanha, nomeCampanha, grupoMantido, gruposRemovidos }) {
+    const numLimpo = extrairNumeroLimpo(numero);
+    const idNorm = normalizarID(numLimpo);
+    let lista = carregarCrocodilos();
+
+    const idx = lista.findIndex(c => {
+        const cNum = extrairNumeroLimpo(c.numero);
+        return cNum === numLimpo || (idNorm && normalizarID(cNum) === idNorm) ||
+            (numLimpo.length >= 10 && cNum.length >= 10 && (cNum.includes(numLimpo) || numLimpo.includes(cNum)));
+    });
+
+    const listaRemovidos = (gruposRemovidos || []).map(g => ({
+        id: g.id,
+        nome: g.subject || g.nome || g.id,
+        removidoEm: new Date().toISOString()
+    }));
+
+    const registro = {
+        numero: numLimpo,
+        numeroFormatado: formatarExibicao(numLimpo),
+        idCampanha: idCampanha || null,
+        nomeCampanha: nomeCampanha || 'Campanha',
+        grupoMantido: {
+            id: grupoMantido.id,
+            nome: grupoMantido.subject || grupoMantido.nome || grupoMantido.id,
+            mantidoDesde: new Date().toISOString()
+        },
+        gruposRemovidos: listaRemovidos,
+        totalGruposTentados: listaRemovidos.length + 1,
+        dataIdentificacao: new Date().toISOString(),
+        ultimaTentativaBloqueada: null
+    };
+
+    if (idx !== -1) {
+        // Se já existia, preserva o grupo mantido original caso já definido
+        if (lista[idx].grupoMantido && lista[idx].grupoMantido.id) {
+            registro.grupoMantido = lista[idx].grupoMantido;
+        }
+        lista[idx] = registro;
+    } else {
+        lista.unshift(registro);
+    }
+
+    salvarCrocodilos(lista);
+    return registro;
+}
+
+function registrarTentativaEntradaCrocodilo(crocodilo, grupoTentado) {
+    if (!crocodilo || !grupoTentado) return;
+    try {
+        let lista = carregarCrocodilos();
+        const numLimpo = extrairNumeroLimpo(crocodilo.numero);
+        const idNorm = normalizarID(numLimpo);
+
+        const item = lista.find(c => {
+            const cNum = extrairNumeroLimpo(c.numero);
+            return cNum === numLimpo || (idNorm && normalizarID(cNum) === idNorm);
+        });
+
+        if (item) {
+            item.ultimaTentativaBloqueada = new Date().toISOString();
+            item.totalGruposTentados = (item.totalGruposTentados || 1) + 1;
+            if (!Array.isArray(item.gruposRemovidos)) item.gruposRemovidos = [];
+
+            const jaExiste = item.gruposRemovidos.some(g => g.id === grupoTentado.id);
+            if (!jaExiste) {
+                item.gruposRemovidos.push({
+                    id: grupoTentado.id,
+                    nome: grupoTentado.subject || grupoTentado.nome || grupoTentado.id,
+                    removidoEm: new Date().toISOString()
+                });
+            }
+            salvarCrocodilos(lista);
+        }
+    } catch (e) { }
+}
+
+function removerCrocodilo(numeroAlvo) {
+    const numLimpo = extrairNumeroLimpo(numeroAlvo);
+    const idNorm = normalizarID(numLimpo);
+    let lista = carregarCrocodilos();
+    const antes = lista.length;
+    lista = lista.filter(c => {
+        const cNum = extrairNumeroLimpo(c.numero);
+        if (cNum === numLimpo) return false;
+        if (idNorm && normalizarID(cNum) === idNorm) return false;
+        if (numLimpo.length >= 10 && cNum.length >= 10 && (cNum.includes(numLimpo) || numLimpo.includes(cNum))) return false;
+        return true;
+    });
+    if (lista.length !== antes) {
+        salvarCrocodilos(lista);
+        return true;
+    }
+    return false;
+}
+
+// =====================================================================
 // 🚀 GERENCIADOR DE CONEXÃO DOS ADMS (CONTAS DO WHATSAPP)
 // =====================================================================
 const snipersAtivos = [];
@@ -545,7 +741,7 @@ async function removerSniperCampanha(id) {
     }
 
     // 2. Remove com segurança a pasta de credenciais deste sniper
-    const pastaAuth = path.join(__dirname, `auth_sniper_${id}`);
+    const pastaAuth = obterPastaAuth(id);
     if (fs.existsSync(pastaAuth)) {
         try {
             fs.rmSync(pastaAuth, { recursive: true, force: true });
@@ -873,18 +1069,220 @@ async function mapearGruposDoSniper(sniperObj) {
 
         console.log(`[✅ ADM 0${indice}] ${gruposMapeados} grupos sincronizados e catalogados com sucesso! Campanha: ${campaignName}`);
         adicionarEventoFeed('ADM', `✅ ADM 0${indice}: ${gruposMapeados} grupos sincronizados (${campaignName})`);
+
+        // Dispara auditoria imediata de Crocodilos Kelven e saturação para a campanha deste sniper
+        const campAlvoAuditoria = campaignId || (infoCamp ? infoCamp.idCampanha : null);
+        if (campAlvoAuditoria) {
+            await auditarSaturacaoECrocodilos(campAlvoAuditoria);
+        }
     } catch (err) {
         console.error(`[!] Erro ao mapear grupos do ADM 0${sniperObj.indice}:`, err.message);
     }
 }
 
+// =====================================================================
+// 💾 AUTO-SALVAMENTO PERIÓDICO DO PACOTE DE SESSÕES (ANTI-PERDA DE DEPLOY)
+// =====================================================================
+function autoSalvarBackupSessoes() {
+    try {
+        const AdmZip = require('adm-zip');
+        const zip = new AdmZip();
+        let encontrou = false;
+
+        const scanDirs = [DATA_DIR, __dirname];
+        const pastasSalvas = new Set();
+
+        for (const dir of scanDirs) {
+            if (!fs.existsSync(dir)) continue;
+            for (const item of fs.readdirSync(dir)) {
+                if (item.startsWith('auth_sniper_') && !pastasSalvas.has(item)) {
+                    const fullP = path.join(dir, item);
+                    if (fs.statSync(fullP).isDirectory() && fs.existsSync(path.join(fullP, 'creds.json'))) {
+                        zip.addLocalFolder(fullP, item);
+                        pastasSalvas.add(item);
+                        encontrou = true;
+                    }
+                }
+            }
+        }
+
+        const arqs = [ARQUIVO_CONFIG, ARQUIVO_WHITELIST, ARQUIVO_BLACKLIST, ARQUIVO_CROCODILOS, ARQUIVO_SNIPERS_CAMPANHAS];
+        for (const a of arqs) {
+            if (fs.existsSync(a)) {
+                zip.addLocalFile(a);
+            }
+        }
+
+        if (encontrou) {
+            zip.writeZip(path.join(DATA_DIR, 'aegis_sessoes_snipers.zip'));
+            if (DATA_DIR !== __dirname) {
+                zip.writeZip(path.join(__dirname, 'aegis_sessoes_snipers.zip'));
+            }
+        }
+    } catch (e) { }
+}
+
+// =====================================================================
+// 🐊 AUDITORIA DE CROCODILOS KELVEN & SATURAÇÃO
+// "se eu estiver acima de 4 grupos, deve ser removido de todos os grupos,
+// ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU, quando esse lead atingir
+// esse limite, ele entra na lista dos 'Crocodilo Kelven'."
+// =====================================================================
+async function auditarSaturacaoECrocodilos(idCampanha) {
+    if (!idCampanha) return;
+    configAtual = carregarConfig();
+    const limiteMax = configAtual.limiteGruposPorCampanha || 4;
+    const limiteBan = configAtual.limiteBanPermanente || 10;
+    const mapaPresenca = obterPresencaCampanha(idCampanha);
+    const mapaGrupos = obterGruposCampanha(idCampanha);
+    const nomeCampanha = mapaInfoCampanhas.get(idCampanha)?.name || idCampanha;
+
+    let crocodilosTratados = 0;
+
+    for (const [idNorm, setGrupos] of mapaPresenca.entries()) {
+        if (!setGrupos || setGrupos.size <= limiteMax) continue;
+
+        // Recupera o número real e JID do participante
+        let numReal = null;
+        let jidOriginal = null;
+        for (const gid of setGrupos) {
+            const g = mapaGrupos.get(gid);
+            const p = g?.participants?.find(part => {
+                const n = extrairNumeroParticipante(part);
+                return n && normalizarID(n) === idNorm;
+            });
+            if (p) {
+                numReal = extrairNumeroParticipante(p);
+                jidOriginal = p.id || p.jid || '';
+                break;
+            }
+        }
+        if (!numReal) continue;
+
+        // Imunidades
+        if (ehAdmDaCampanha(idCampanha, numReal) || ehAdmDaCampanha(idCampanha, idNorm)) continue;
+        if (estaNaWhitelist(numReal, snipersAtivos) || estaNaWhitelist(idNorm, snipersAtivos)) continue;
+        if (adminsGlobais.has(numReal) || adminsGlobais.has(idNorm)) continue;
+
+        const totalLinksGeral = calcularTotalGruposGeral(idNorm);
+
+        // REGRA 1: Ban Permanente (> limiteBan)
+        if (totalLinksGeral > limiteBan || setGrupos.size > limiteBan || estaNaBlacklist(numReal) || estaNaBlacklist(idNorm)) {
+            console.log(`⛔ [AUDITORIA - BAN PERMANENTE] Lead ${numReal} detectado em ${setGrupos.size} grupos (> limite ban ${limiteBan})! Removendo de TODOS.`);
+            adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${formatarExibicao(numReal)} atingiu ${setGrupos.size} grupos (> limite ${limiteBan}). Banido permanentemente!`);
+
+            if (!estaNaBlacklist(numReal)) {
+                cacheBlacklist.unshift({
+                    numero: numReal,
+                    numeroFormatado: formatarExibicao(numReal),
+                    motivo: `Encontrado em ${setGrupos.size} grupos no escaneamento (Limite permitido: ${limiteBan})`,
+                    dataBanimento: new Date().toISOString(),
+                    totalGrupos: setGrupos.size
+                });
+                salvarBlacklist(cacheBlacklist);
+            }
+
+            const jidsParaTentar = [];
+            if (jidOriginal && jidOriginal.includes('@')) jidsParaTentar.push(jidOriginal);
+            jidsParaTentar.push(`${numReal}@s.whatsapp.net`, `${numReal}@lid`);
+
+            for (const gid of setGrupos) {
+                enfileirarKickRealtime({
+                    idGrupo: gid,
+                    nomeGrupo: obterNomeGrupo(gid),
+                    tagCampanha: nomeCampanha,
+                    numReal,
+                    idNorm,
+                    jidsParaTentar,
+                    mapaPresencaAlvo: mapaPresenca,
+                    ehBanPermanente: true
+                });
+            }
+            continue;
+        }
+
+        // REGRA 2: Crocodilo Kelven (> limiteMax, ex: > 4)
+        // Regra do Usuário: "ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU"
+        crocodilosTratados++;
+        const listaGruposDoLead = Array.from(setGrupos).map(gid => {
+            const g = mapaGrupos.get(gid);
+            return {
+                id: gid,
+                subject: g?.subject || obterNomeGrupo(gid) || gid,
+                creation: g?.creation || 0
+            };
+        });
+
+        // Se já existe um registro de Crocodilo Kelven para este lead, preserva o grupo mantido original dele
+        const crocodiloExistente = obterCrocodilo(numReal, idCampanha);
+        let primeiroGrupo = null;
+        let gruposParaRemover = [];
+
+        if (crocodiloExistente && crocodiloExistente.grupoMantido && setGrupos.has(crocodiloExistente.grupoMantido.id)) {
+            primeiroGrupo = {
+                id: crocodiloExistente.grupoMantido.id,
+                subject: crocodiloExistente.grupoMantido.nome || obterNomeGrupo(crocodiloExistente.grupoMantido.id)
+            };
+            gruposParaRemover = listaGruposDoLead.filter(g => g.id !== primeiroGrupo.id);
+        } else {
+            // Ordena: data de criação mais antiga ou numeração natural no título (ex: Grupo 01 antes de 02)
+            listaGruposDoLead.sort((a, b) => {
+                if (a.creation && b.creation && a.creation !== b.creation) {
+                    return a.creation - b.creation;
+                }
+                return a.subject.localeCompare(b.subject, undefined, { numeric: true });
+            });
+            primeiroGrupo = listaGruposDoLead[0];
+            gruposParaRemover = listaGruposDoLead.slice(1);
+        }
+
+        console.log(`\n🐊 [CROCODILO KELVEN IDENTIFICADO] Lead ${numReal} está em ${setGrupos.size} grupos na campanha "${nomeCampanha}"!`);
+        console.log(`   ✅ Mantido APENAS no 1º grupo acessado: "${primeiroGrupo.subject}"`);
+        console.log(`   🔴 Removendo dos demais ${gruposParaRemover.length} grupos excedentes...`);
+
+        adicionarEventoFeed('ALERTA', `🐊 Crocodilo Kelven! Lead ${formatarExibicao(numReal)} em ${setGrupos.size} grupos. Mantido apenas no 1º grupo ("${primeiroGrupo.subject}") e expulso dos demais!`);
+
+        registrarCrocodilo({
+            numero: numReal,
+            idCampanha,
+            nomeCampanha,
+            grupoMantido: primeiroGrupo,
+            gruposRemovidos: gruposParaRemover
+        });
+
+        // Atualiza a presença em RAM para manter apenas o 1º grupo
+        setGrupos.clear();
+        setGrupos.add(primeiroGrupo.id);
+
+        const jidsParaTentar = [];
+        if (jidOriginal && jidOriginal.includes('@')) jidsParaTentar.push(jidOriginal);
+        jidsParaTentar.push(`${numReal}@s.whatsapp.net`, `${numReal}@lid`);
+
+        for (const grp of gruposParaRemover) {
+            enfileirarKickRealtime({
+                idGrupo: grp.id,
+                nomeGrupo: grp.subject,
+                tagCampanha: nomeCampanha,
+                numReal,
+                idNorm,
+                jidsParaTentar,
+                mapaPresencaAlvo: mapaPresenca,
+                ehBanPermanente: false
+            });
+        }
+    }
+
+    if (crocodilosTratados > 0) {
+        console.log(`✅ [AUDITORIA CROCODILOS] ${crocodilosTratados} Crocodilos Kelven auditados e tratados na campanha "${nomeCampanha}".`);
+    }
+}
 
 // Conexão autônoma de ADM via pasta existente
 async function conectarSniper(indice) {
     indice = Number(indice);
     cancelarReconexao(indice);
 
-    const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
+    const pastaAuth = obterPastaAuth(indice);
     if (!fs.existsSync(pastaAuth)) return null;
 
     try {
@@ -953,6 +1351,7 @@ async function conectarSniper(indice) {
                     sentinelaRealtimeAtivo = true;
                     vincularListenersRealtime(sniperObj);
                     mapearGruposDoSniper(sniperObj).catch(() => {});
+                    setTimeout(autoSalvarBackupSessoes, 2000);
 
                     if (!resolvido) {
                         resolvido = true;
@@ -1001,7 +1400,7 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
 
     cancelarReconexao(indice);
 
-    const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
+    const pastaAuth = obterPastaAuth(indice);
 
     // Fecha socket existente no mesmo slot se houver e remove de snipersAtivos
     const idxExistente = snipersAtivos.findIndex(x => x.indice === indice);
@@ -1126,6 +1525,7 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
             sentinelaRealtimeAtivo = true;
             vincularListenersRealtime(sniperObj);
             mapearGruposDoSniper(sniperObj).catch(() => {});
+            setTimeout(autoSalvarBackupSessoes, 2000);
         }
 
         // 3. FECHADO (RECONEXÃO AUTOMÁTICA PÓS-PAREAMENTO)
@@ -1172,7 +1572,7 @@ async function desconectarAdm(indice) {
     indice = Number(indice);
     cancelarReconexao(indice);
 
-    const pastaAuth = path.join(__dirname, `auth_sniper_${indice}`);
+    const pastaAuth = obterPastaAuth(indice);
 
     const idx = snipersAtivos.findIndex(x => x.indice === indice);
     if (idx !== -1) {
@@ -1285,15 +1685,28 @@ function desbanir(numeroAlvo) {
 
     let lista = carregarBlacklist();
     const antes = lista.length;
-    lista = lista.filter(x => x.numero !== numLimpo && (!idNorm || normalizarID(x.numero) !== idNorm));
+    lista = lista.filter(x => {
+        const xNum = extrairNumeroLimpo(x.numero);
+        if (xNum === numLimpo) return false;
+        if (idNorm && normalizarID(xNum) === idNorm) return false;
+        if (numLimpo.length >= 10 && xNum.length >= 10 && (xNum.includes(numLimpo) || numLimpo.includes(xNum))) return false;
+        return true;
+    });
 
-    if (lista.length === antes) {
-        return { sucesso: false, erro: 'Número não encontrado na Blacklist.' };
+    // Remove também da lista de Crocodilos Kelven se estiver nela
+    removerCrocodilo(numLimpo);
+
+    // Limpa travas de redundância para que possa reentrar sem esperar 30s
+    for (const hash of travasRedundancia) {
+        if (hash.includes(numLimpo) || (idNorm && hash.includes(idNorm))) {
+            travasRedundancia.delete(hash);
+        }
     }
 
     salvarBlacklist(lista);
-    adicionarEventoFeed('SISTEMA', `🔓 ${formatarExibicao(numLimpo)} foi removido da Blacklist.`);
-    return { sucesso: true, mensagem: `Número ${formatarExibicao(numLimpo)} desbanido com sucesso.` };
+    adicionarEventoFeed('SISTEMA', `🔓 ${formatarExibicao(numLimpo)} foi desbanido e liberado com sucesso.`);
+    setTimeout(autoSalvarBackupSessoes, 2000);
+    return { sucesso: true, mensagem: `Número ${formatarExibicao(numLimpo)} desbanido e liberado com sucesso.` };
 }
 
 // =====================================================================
@@ -1765,6 +2178,38 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
+            // 🐊 CHECAGEM CROCODILO KELVEN PREEXISTENTE
+            // Regra: se o lead já é um Crocodilo Kelven, só tem permissão de estar no 1º grupo acessado.
+            // Qualquer tentativa de entrar em outro grupo = EXPULSÃO IMEDIATA.
+            const crocodiloExistente = obterCrocodilo(numReal, idCampanha);
+            if (crocodiloExistente && crocodiloExistente.grupoMantido) {
+                if (crocodiloExistente.grupoMantido.id !== idGrupo) {
+                    console.log(`\n🐊 [CATRACA - CROCODILO BARRADO] ${numReal} é um Crocodilo Kelven!`);
+                    console.log(`   Tentou entrar em: "${nomeGrupo}" (${tagCampanha})`);
+                    console.log(`   Permitido exclusivamente no 1º grupo que acessou: "${crocodiloExistente.grupoMantido.nome}". EXPULSANDO DO NOVO GRUPO...`);
+                    adicionarEventoFeed('ALERTA', `🐊 Crocodilo ${formatarExibicao(numReal)} barrado em "${nomeGrupo}"! Removido para permanecer apenas em seu 1º grupo ("${crocodiloExistente.grupoMantido.nome}").`);
+
+                    // Atualiza histórico de tentativas barradas deste Crocodilo
+                    registrarTentativaEntradaCrocodilo(crocodiloExistente, { id: idGrupo, subject: nomeGrupo });
+
+                    enfileirarKickRealtime({
+                        idGrupo,
+                        nomeGrupo,
+                        tagCampanha,
+                        numReal,
+                        idNorm,
+                        jidsParaTentar,
+                        mapaPresencaAlvo,
+                        ehBanPermanente: false
+                    });
+                    continue;
+                } else {
+                    console.log(`🐊 [CATRACA - CROCODILO NO 1º GRUPO PERMITIDO] ${numReal} entrou em "${nomeGrupo}", que é o seu 1º grupo permitido.`);
+                    adicionarEventoFeed('ALERTA', `🐊 Crocodilo ${formatarExibicao(numReal)} entrou em seu 1º grupo permitido ("${nomeGrupo}").`);
+                    continue;
+                }
+            }
+
             // 📊 ATUALIZAÇÃO DA PRESENÇA NA CAMPANHA E GERAL
             if (!mapaPresencaAlvo.has(idNorm)) mapaPresencaAlvo.set(idNorm, new Set());
             const gruposDoLead = mapaPresencaAlvo.get(idNorm);
@@ -1813,22 +2258,67 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
-            // ⚖️ REGRA 4: SATURAÇÃO NORMAL NA MESMA CAMPANHA (> limiteMax)
-            // REMOVE APENAS O GRUPO DUPLICADO (o grupo excedente idGrupo onde o lead acabou de entrar)
+            // 🐊 REGRA 4: CROCODILOS KELVEN (> limiteMax, ex: > 4 grupos)
+            // Regra do Usuário: "se eu estiver acima de 4 grupos, deve ser removido de todos os grupos,
+            // ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU, quando esse lead atingir esse limite,
+            // ele entra na lista dos 'Crocodilo Kelven', e toda vez que tentar entrar em mais um grupo ele será removido."
             if (gruposDoLead.size > limiteMax) {
-                console.log(`\n🚨 [ALERTA CATRACA - DUPLICADO] Lead ${numReal} violou a regra de saturação! (${gruposDoLead.size}/${limiteMax} permitidos em ${tagCampanha}). EXPULSANDO APENAS DO GRUPO DUPLICADO: "${nomeGrupo}"...`);
-                adicionarEventoFeed('ALERTA', `🚨 Duplicado! Lead ${formatarExibicao(numReal)} excedeu o limite de grupos (${gruposDoLead.size}/${limiteMax}) em ${tagCampanha}. Expulsando apenas do grupo extra: "${nomeGrupo}"`);
-
-                enfileirarKickRealtime({
-                    idGrupo,
-                    nomeGrupo,
-                    tagCampanha,
-                    numReal,
-                    idNorm,
-                    jidsParaTentar,
-                    mapaPresencaAlvo,
-                    ehBanPermanente: false
+                const mapaGrupos = obterGruposCampanha(idCampanha);
+                const listaGruposDoLead = Array.from(gruposDoLead).map(gid => {
+                    const g = mapaGrupos.get(gid);
+                    return {
+                        id: gid,
+                        subject: g?.subject || obterNomeGrupo(gid) || gid,
+                        creation: g?.creation || 0
+                    };
                 });
+
+                // Ordenação inteligente para garantir que o 1º grupo que ele acessou seja mantido:
+                // 1) O grupo recém-entrado agora (idGrupo) vai para o final porque foi o último grupo onde ele entrou!
+                // 2) Se houver datas de criação válidas e diferentes, pega a mais antiga
+                // 3) Desempate por ordenação alfanumérica natural do nome (ex: Grupo 01 antes de Grupo 02)
+                listaGruposDoLead.sort((a, b) => {
+                    if (a.id === idGrupo && b.id !== idGrupo) return 1;
+                    if (b.id === idGrupo && a.id !== idGrupo) return -1;
+                    if (a.creation && b.creation && a.creation !== b.creation) {
+                        return a.creation - b.creation;
+                    }
+                    return a.subject.localeCompare(b.subject, undefined, { numeric: true });
+                });
+
+                const primeiroGrupo = listaGruposDoLead[0];
+                const gruposParaRemover = listaGruposDoLead.slice(1);
+
+                console.log(`\n🐊 [ALERTA CATRACA - CROCODILO KELVEN] Lead ${numReal} atingiu ${gruposDoLead.size} grupos em ${tagCampanha} (> limite ${limiteMax})!`);
+                console.log(`   ✅ Mantendo APENAS o 1º grupo acessado: "${primeiroGrupo.subject}"`);
+                console.log(`   🔴 Expulsando de TODOS os outros ${gruposParaRemover.length} grupos excedentes...`);
+                adicionarEventoFeed('ALERTA', `🐊 Crocodilo Kelven! Lead ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size} grupos em ${tagCampanha}. Mantido apenas no 1º grupo ("${primeiroGrupo.subject}") e expulso dos demais!`);
+
+                registrarCrocodilo({
+                    numero: numReal,
+                    idCampanha,
+                    nomeCampanha: tagCampanha,
+                    grupoMantido: primeiroGrupo,
+                    gruposRemovidos: gruposParaRemover
+                });
+
+                // Mantém na presença em RAM apenas o 1º grupo
+                gruposDoLead.clear();
+                gruposDoLead.add(primeiroGrupo.id);
+
+                // Dispara expulsão de todos os grupos excedentes (incluindo o idGrupo e os outros)
+                for (const grp of gruposParaRemover) {
+                    enfileirarKickRealtime({
+                        idGrupo: grp.id,
+                        nomeGrupo: grp.subject,
+                        tagCampanha,
+                        numReal,
+                        idNorm,
+                        jidsParaTentar,
+                        mapaPresencaAlvo,
+                        ehBanPermanente: false
+                    });
+                }
             }
         }
     });
@@ -1916,6 +2406,14 @@ module.exports = {
     conectarSniper,
     conectarAdmManual,
     desconectarAdm,
+    carregarCrocodilos,
+    salvarCrocodilos,
+    obterCrocodilo,
+    registrarCrocodilo,
+    removerCrocodilo,
+    auditarSaturacaoECrocodilos,
+    autoSalvarBackupSessoes,
+    DATA_DIR,
     // Aliases para compatibilidade total
     obterStatusEspioes: obterStatusAdms,
     conectarEspiaoManual: conectarAdmManual,

@@ -64,21 +64,26 @@ Se você utiliza Git (GitHub ou GitLab):
   - Exemplo: `aegis.seudominio.com` (ou use o domínio gerado automaticamente pelo Easypanel).
   - O Easypanel gera o certificado SSL (HTTPS) gratuitamente de forma automática!
 
-### 💾 Volumes Persistentes (Armazenamento / Storage)
+### 💾 Volume Persistente Único (Armazenamento / Storage)
 > [!IMPORTANT]
-> Esta etapa garante que, se o container reiniciar ou atualizar, os logins dos seus 4 Snipers e a Whitelist nunca se percam.
+> **ESSENCIAL PARA NUNCA PERDER SEUS LOGINS NEM CONFIGURAÇÕES EM NENHUM DEPLOY:**
+> O sistema agora conta com o diretório unificado `/app/data`. Basta adicionar **1 ÚNICO VOLUME** no Easypanel!
 
-Na aba **Storage** do seu App no Easypanel, adicione os seguintes volumes persistentes:
+Na aba **Storage** do seu App no Easypanel, adicione:
 
 | Nome do Volume | Caminho no Container (Mount Path) |
 | :--- | :--- |
-| `sniper1_auth` | `/app/auth_sniper_1` |
-| `sniper2_auth` | `/app/auth_sniper_2` |
-| `sniper3_auth` | `/app/auth_sniper_3` |
-| `sniper4_auth` | `/app/auth_sniper_4` |
-| `aegis_data` | `/app/whitelist_aegis.json` |
+| `aegis_data` | `/app/data` |
 
-*(Se preferir, você também pode simplesmente montar um volume na pasta `/app` inteira ou usar a ferramenta de restauração pelo próprio site!)*
+**O que fica salvo permanentemente no `/app/data`:**
+- ✅ **Todos os logins de todos os ADMs Snipers** de todas as campanhas (`auth_sniper_*`).
+- ✅ **Backup automático contínuo (`aegis_sessoes_snipers.zip`)**: criado e mantido pelo próprio sistema a cada conexão. Se o container reiniciar, ele restaura tudo sozinho.
+- ✅ **Blacklist Permanente** e **Crocodilos Kelven** (`blacklist_aegis.json`, `crocodilos_kelven.json`).
+- ✅ **Whitelist de Administradores** (`whitelist_aegis.json`).
+- ✅ **Configurações e Limites** (`config_aegis.json`).
+- ✅ **Mapeamento de ADMs por Campanha** (`snipers_campanhas.json`).
+
+> 💡 **Nota:** Se você não configurar o volume persistente no Easypanel, o container do Docker é descartável e perde as alterações ao atualizar a imagem. Criando o volume `/app/data`, nada mais se perde! Além disso, você pode baixar o backup ZIP com 1 clique direto pelo botão no painel.
 
 ---
 
