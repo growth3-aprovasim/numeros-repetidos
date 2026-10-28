@@ -204,32 +204,12 @@ function identificarCampanha(idOuSubject, subjectOpcional) {
         return info.releaseId;
     }
 
-    if (subject) {
-        if (/inss|pi-nov|pi\s*nov/i.test(subject)) return 'Mczvs7LRn3fLHyZzb3tu';
-        if (/black|vital[ií]cia/i.test(subject)) return '1mVRQCG59lTdqDxWZn3n';
-        if (/base\s*forte/i.test(subject)) return 'FeirPHs7jY1cgayuSles';
-        if (/tj-sp|tjsp|tribunal/i.test(subject)) return 'V0F5VLj4HlSVjQCnHeUN';
-    }
     return null;
 }
 
-function obterInfoCompletaCampanha(idGrupo, subject) {
-    // 1. Verifica se já está mapeado em alguma campanha ativa na memória
-    if (idGrupo && mapaGruposPorCampanha.size > 0) {
-        for (const [idCamp, grps] of mapaGruposPorCampanha.entries()) {
-            if (grps.has(idGrupo)) {
-                const g = grps.get(idGrupo);
-                const infoExemplo = mapaInfoCampanhas.get(idCamp);
-                return {
-                    idCampanha: idCamp,
-                    nomeCampanha: infoExemplo?.name || idCamp,
-                    nomeGrupo: g?.subject || subject || idGrupo
-                };
-            }
-        }
-    }
-
-    const info = obterInfoGrupoCampanha(idGrupo, subject);
+function obterInfoCompletaCampanha(idGrupo, subject, participantsAmount = 0) {
+    // 1. Consulta diretamente a base de grupos vinculados nas campanhas ativas do SendFlow
+    const info = obterInfoGrupoCampanha(idGrupo, subject, participantsAmount);
     if (info) {
         return {
             idCampanha: info.releaseId,
@@ -238,37 +218,26 @@ function obterInfoCompletaCampanha(idGrupo, subject) {
         };
     }
 
-    if (subject) {
-        const subLower = subject.toLowerCase();
-        if (/inss|pi-nov|pi\s*nov/i.test(subLower)) {
-            return {
-                idCampanha: 'Mczvs7LRn3fLHyZzb3tu',
-                nomeCampanha: 'Projeto INSS [PI-NOV-26]',
-                nomeGrupo: subject
-            };
-        }
-        if (/black|vital[ií]cia/i.test(subLower)) {
-            return {
-                idCampanha: '1mVRQCG59lTdqDxWZn3n',
-                nomeCampanha: 'Black Vitalícia [BV-26]',
-                nomeGrupo: subject
-            };
-        }
-        if (/base\s*forte/i.test(subLower)) {
-            return {
-                idCampanha: 'FeirPHs7jY1cgayuSles',
-                nomeCampanha: 'Base Forte 2026',
-                nomeGrupo: subject
-            };
-        }
-        if (/tj-sp|tjsp|tribunal/i.test(subLower)) {
-            return {
-                idCampanha: 'V0F5VLj4HlSVjQCnHeUN',
-                nomeCampanha: 'Projeto TJ-SP Pós-Edital [PES-PPE-26]',
-                nomeGrupo: subject
-            };
+    // 2. Se idGrupo já estava mapeado em memória mas sem subject na chamada atual, verifica se o grupo mapeado pertence ao SendFlow
+    if (idGrupo && !subject && mapaGruposPorCampanha.size > 0) {
+        for (const [idCamp, grps] of mapaGruposPorCampanha.entries()) {
+            if (grps.has(idGrupo)) {
+                const g = grps.get(idGrupo);
+                const recheck = obterInfoGrupoCampanha(idGrupo, g?.subject, g?.participants?.length || participantsAmount);
+                if (recheck) {
+                    return {
+                        idCampanha: recheck.releaseId,
+                        nomeCampanha: recheck.nomeCampanha,
+                        nomeGrupo: recheck.nomeGrupo || g?.subject || idGrupo
+                    };
+                } else {
+                    // Grupo não está mais vinculado ao SendFlow; remove da memória ativa
+                    grps.delete(idGrupo);
+                }
+            }
         }
     }
+
     return null;
 }
 
@@ -949,6 +918,30 @@ function obterNomeGrupo(idGrupo) {
     return idGrupo;
 }
 
+function sniperEstaOperacional(s) {
+    return Boolean(s && s.conectado && s.sock && s.sock.user && s.sock.ws?.isOpen !== false);
+}
+
+async function obterMetadataGrupoResiliente(idGrupo, sniperPreferencial = null) {
+    if (sniperPreferencial && sniperEstaOperacional(sniperPreferencial)) {
+        try {
+            const meta = await sniperPreferencial.sock.groupMetadata(idGrupo);
+            if (meta) return meta;
+        } catch (e) { }
+    }
+    const candidatos = obterSnipersDisponiveis(idGrupo);
+    for (const s of candidatos) {
+        if (sniperPreferencial && s.indice === sniperPreferencial.indice) continue;
+        try {
+            const meta = await s.sock.groupMetadata(idGrupo);
+            if (meta) return meta;
+        } catch (e) { }
+    }
+    return null;
+}
+
+let rotadorSnipers = 0;
+
 function obterSnipersDisponiveis(idGrupo) {
     let campaignId = null;
     const infoCampanha = obterInfoGrupoCampanha(idGrupo);
@@ -964,73 +957,85 @@ function obterSnipersDisponiveis(idGrupo) {
         }
     }
 
-    // 1. Prioridade Máxima: ADMs Snipers vinculados EXCLUSIVAMENTE a esta campanha
-    if (campaignId) {
-        const snipersDaCampanha = snipersAtivos.filter(s => {
-            const meta = obterMetaSniper(s.indice);
-            return meta && meta.campaignId === campaignId && s.conectado && s.sock?.ws?.isOpen;
-        });
+    const operacionais = snipersAtivos.filter(sniperEstaOperacional);
+    if (operacionais.length === 0) return [];
 
-        if (snipersDaCampanha.length > 0) {
-            // Se algum desses snipers já for admin confirmado no grupo, prioriza ele
-            const indicesAdminNoGrupo = mapaAdminGrupos.get(idGrupo);
-            if (indicesAdminNoGrupo && indicesAdminNoGrupo.size > 0) {
-                const confirmados = snipersDaCampanha.filter(s => indicesAdminNoGrupo.has(s.indice));
-                if (confirmados.length > 0) return confirmados;
+    rotadorSnipers++;
+    const indicesAdminNoGrupo = mapaAdminGrupos.get(idGrupo) || new Set();
+    const ordenados = [];
+    const jaAdicionados = new Set();
+
+    const adicionarListaRotacionada = (lista) => {
+        if (!lista || lista.length === 0) return;
+        const offset = rotadorSnipers % lista.length;
+        for (let i = 0; i < lista.length; i++) {
+            const s = lista[(offset + i) % lista.length];
+            if (!jaAdicionados.has(s.indice)) {
+                jaAdicionados.add(s.indice);
+                ordenados.push(s);
             }
-            return snipersDaCampanha;
         }
+    };
+
+    // 1. Prioridade Máxima: ADMs da campanha que são admins confirmados no grupo (rotacionados entre si)
+    if (campaignId) {
+        adicionarListaRotacionada(operacionais.filter(s => {
+            const meta = obterMetaSniper(s.indice);
+            return meta && meta.campaignId === campaignId && indicesAdminNoGrupo.has(s.indice);
+        }));
     }
 
-    // 2. Prioridade Média: Qualquer ADM sniper conectado que seja admin confirmado deste grupo
-    const indices = mapaAdminGrupos.get(idGrupo);
-    if (indices && indices.size > 0) {
-        const adminsConectados = snipersAtivos.filter(s =>
-            indices.has(s.indice) &&
-            s.conectado &&
-            s.sock?.ws?.isOpen
-        );
-        if (adminsConectados.length > 0) return adminsConectados;
+    // 2. Prioridade Alta: Qualquer outro ADM operacional que seja admin confirmado no grupo (Failover imediato se o ADM titular cair/for banido)
+    adicionarListaRotacionada(operacionais.filter(s => indicesAdminNoGrupo.has(s.indice)));
+
+    // 3. Prioridade Média: Demais ADMs vinculados à campanha
+    if (campaignId) {
+        adicionarListaRotacionada(operacionais.filter(s => {
+            const meta = obterMetaSniper(s.indice);
+            return meta && meta.campaignId === campaignId;
+        }));
     }
 
-    // 3. Fallback Seguro: Qualquer ADM sniper conectado e pronto com socket aberto
-    return snipersAtivos.filter(s => s.conectado && s.sock?.ws?.isOpen);
+    // 4. Fallback Total: Qualquer outro ADM operacional conectado
+    adicionarListaRotacionada(operacionais);
+
+    return ordenados;
 }
 
 // =====================================================================
-// 📋 AUTO-MAPEAMENTO DE GRUPOS E ADMS VIA WHATSAPP (INSTANTÂNEO & SEGURO)
+// 📋 AUTO-MAPEAMENTO DE GRUPOS E ADMS VIA WHATSAPP (ESTRITAMENTE SENDFLOW)
 // =====================================================================
 async function mapearGruposDoSniper(sniperObj) {
-    if (!sniperObj || !sniperObj.sock) return;
+    if (!sniperObj || !sniperEstaOperacional(sniperObj)) return;
     try {
         const indice = sniperObj.indice;
         const metaSniper = obterMetaSniper(indice);
-        const campaignId = metaSniper?.campaignId || null;
-        const campaignName = metaSniper?.campaignName || 'Campanha Desconhecida';
+        const campaignName = metaSniper?.campaignName || 'Campanha SendFlow';
 
-        console.log(`[🔍 ADM 0${indice}] Mapeando grupos diretamente via WhatsApp...`);
+        console.log(`[🔍 ADM 0${indice}] Mapeando grupos vinculados ao SendFlow via WhatsApp...`);
         const allGroups = await sniperObj.sock.groupFetchAllParticipating();
         const groupIds = Object.keys(allGroups);
-        console.log(`[📋 ADM 0${indice}] Encontrados ${groupIds.length} grupos no chip.`);
 
         let gruposMapeados = 0;
+        let gruposIgnorados = 0;
+        const campanhasAfetadas = new Set();
         const meuNum = extrairNumeroLimpo(sniperObj.sock.user?.id);
 
         for (const gid of groupIds) {
             const g = allGroups[gid];
-            let idCamp = campaignId;
-            let nomeCamp = campaignName;
 
-            const infoCamp = obterInfoCompletaCampanha(gid, g.subject);
-            if (infoCamp && infoCamp.idCampanha) {
-                idCamp = infoCamp.idCampanha;
-                nomeCamp = infoCamp.nomeCampanha;
-            } else if (!idCamp) {
-                idCamp = 'GLOBAL';
-                nomeCamp = 'Geral';
+            // Vigia EXCLUSIVAMENTE os grupos vinculados pela API do SendFlow / aba Campanhas SendFlow & ADMs
+            const infoCamp = obterInfoCompletaCampanha(gid, g.subject, g.participants?.length || 0);
+            if (!infoCamp || !infoCamp.idCampanha) {
+                gruposIgnorados++;
+                continue;
             }
 
-            if (idCamp && !mapaInfoCampanhas.has(idCamp)) {
+            const idCamp = infoCamp.idCampanha;
+            const nomeCamp = infoCamp.nomeCampanha;
+            campanhasAfetadas.add(idCamp);
+
+            if (!mapaInfoCampanhas.has(idCamp)) {
                 mapaInfoCampanhas.set(idCamp, { id: idCamp, name: nomeCamp });
             }
 
@@ -1067,13 +1072,11 @@ async function mapearGruposDoSniper(sniperObj) {
             }
         }
 
-        console.log(`[✅ ADM 0${indice}] ${gruposMapeados} grupos sincronizados e catalogados com sucesso! Campanha: ${campaignName}`);
-        adicionarEventoFeed('ADM', `✅ ADM 0${indice}: ${gruposMapeados} grupos sincronizados (${campaignName})`);
+        console.log(`[✅ ADM 0${indice}] ${gruposMapeados} grupos do SendFlow sincronizados (${gruposIgnorados} grupos antigos/externos ignorados).`);
+        adicionarEventoFeed('ADM', `✅ ADM 0${indice}: ${gruposMapeados} grupos do SendFlow em vigilância (${gruposIgnorados} grupos antigos ignorados)`);
 
-        // Dispara auditoria imediata de Crocodilos Kelven e saturação para a campanha deste sniper
-        const campAlvoAuditoria = campaignId || (infoCamp ? infoCamp.idCampanha : null);
-        if (campAlvoAuditoria) {
-            await auditarSaturacaoECrocodilos(campAlvoAuditoria);
+        for (const idCamp of campanhasAfetadas) {
+            await auditarSaturacaoECrocodilos(idCamp);
         }
     } catch (err) {
         console.error(`[!] Erro ao mapear grupos do ADM 0${sniperObj.indice}:`, err.message);
@@ -1123,10 +1126,9 @@ function autoSalvarBackupSessoes() {
 }
 
 // =====================================================================
-// 🐊 AUDITORIA DE CROCODILOS KELVEN & SATURAÇÃO
-// "se eu estiver acima de 4 grupos, deve ser removido de todos os grupos,
-// ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU, quando esse lead atingir
-// esse limite, ele entra na lista dos 'Crocodilo Kelven'."
+// 🔒 AUDITORIA DE LEADS RESTRITOS, BLACKLIST & SATURAÇÃO
+// Regra: Acima do limite de grupos (ex: > 4), é removido de todos os
+// grupos excedentes, mantendo APENAS o 1º grupo acessado, e fica Restrito.
 // =====================================================================
 async function auditarSaturacaoECrocodilos(idCampanha) {
     if (!idCampanha) return;
@@ -1137,10 +1139,21 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
     const mapaGrupos = obterGruposCampanha(idCampanha);
     const nomeCampanha = mapaInfoCampanhas.get(idCampanha)?.name || idCampanha;
 
-    let crocodilosTratados = 0;
+    // Remove da memória quaisquer grupos que não estejam mais vinculados ao SendFlow
+    for (const gid of Array.from(mapaGrupos.keys())) {
+        const g = mapaGrupos.get(gid);
+        if (!obterInfoGrupoCampanha(gid, g?.subject)) {
+            mapaGrupos.delete(gid);
+            for (const setG of mapaPresenca.values()) {
+                setG.delete(gid);
+            }
+        }
+    }
+
+    let restritosTratados = 0;
 
     for (const [idNorm, setGrupos] of mapaPresenca.entries()) {
-        if (!setGrupos || setGrupos.size <= limiteMax) continue;
+        if (!setGrupos || setGrupos.size === 0) continue;
 
         // Recupera o número real e JID do participante
         let numReal = null;
@@ -1166,27 +1179,27 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
 
         const totalLinksGeral = calcularTotalGruposGeral(idNorm);
 
-        // REGRA 1: Ban Permanente (> limiteBan)
+        const jidsParaTentar = [];
+        if (jidOriginal && jidOriginal.includes('@')) jidsParaTentar.push(jidOriginal);
+        jidsParaTentar.push(`${numReal}@s.whatsapp.net`, `${numReal}@lid`);
+
+        // REGRA 1: Ban Permanente (Blacklist ou > limiteBan) — vale mesmo que esteja em 1 único grupo!
         if (totalLinksGeral > limiteBan || setGrupos.size > limiteBan || estaNaBlacklist(numReal) || estaNaBlacklist(idNorm)) {
-            console.log(`⛔ [AUDITORIA - BAN PERMANENTE] Lead ${numReal} detectado em ${setGrupos.size} grupos (> limite ban ${limiteBan})! Removendo de TODOS.`);
-            adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${formatarExibicao(numReal)} atingiu ${setGrupos.size} grupos (> limite ${limiteBan}). Banido permanentemente!`);
+            console.log(`⛔ [AUDITORIA - BAN PERMANENTE] Lead ${numReal} detectado em ${setGrupos.size} grupo(s) de "${nomeCampanha}"! Removendo de TODOS.`);
+            adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${formatarExibicao(numReal)} banido permanentemente! Expulsando de todos os grupos.`);
 
             if (!estaNaBlacklist(numReal)) {
                 cacheBlacklist.unshift({
                     numero: numReal,
                     numeroFormatado: formatarExibicao(numReal),
-                    motivo: `Encontrado em ${setGrupos.size} grupos no escaneamento (Limite permitido: ${limiteBan})`,
+                    motivo: `Encontrado em ${Math.max(setGrupos.size, totalLinksGeral)} grupos no escaneamento (Limite permitido: ${limiteBan})`,
                     dataBanimento: new Date().toISOString(),
-                    totalGrupos: setGrupos.size
+                    totalGrupos: Math.max(setGrupos.size, totalLinksGeral)
                 });
                 salvarBlacklist(cacheBlacklist);
             }
 
-            const jidsParaTentar = [];
-            if (jidOriginal && jidOriginal.includes('@')) jidsParaTentar.push(jidOriginal);
-            jidsParaTentar.push(`${numReal}@s.whatsapp.net`, `${numReal}@lid`);
-
-            for (const gid of setGrupos) {
+            for (const gid of Array.from(setGrupos)) {
                 enfileirarKickRealtime({
                     idGrupo: gid,
                     nomeGrupo: obterNomeGrupo(gid),
@@ -1201,9 +1214,35 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
             continue;
         }
 
-        // REGRA 2: Crocodilo Kelven (> limiteMax, ex: > 4)
-        // Regra do Usuário: "ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU"
-        crocodilosTratados++;
+        // REGRA 2: Lead já consta na lista de Restritos (só pode permanecer no 1º grupo que acessou)
+        const restritoExistente = obterCrocodilo(numReal, idCampanha);
+        if (restritoExistente && restritoExistente.grupoMantido?.id && setGrupos.size <= limiteMax) {
+            const idPermitido = restritoExistente.grupoMantido.id;
+            const gruposIndevidos = Array.from(setGrupos).filter(gid => gid !== idPermitido);
+            if (gruposIndevidos.length > 0) {
+                for (const gid of gruposIndevidos) {
+                    const nomeG = obterNomeGrupo(gid);
+                    registrarTentativaEntradaCrocodilo(restritoExistente, { id: gid, subject: nomeG });
+                    setGrupos.delete(gid);
+                    enfileirarKickRealtime({
+                        idGrupo: gid,
+                        nomeGrupo: nomeG,
+                        tagCampanha: nomeCampanha,
+                        numReal,
+                        idNorm,
+                        jidsParaTentar,
+                        mapaPresencaAlvo: mapaPresenca,
+                        ehBanPermanente: false
+                    });
+                }
+            }
+            continue;
+        }
+
+        if (setGrupos.size <= limiteMax) continue;
+
+        // REGRA 3: Lead ultrapassou o limite de grupos (> limiteMax, ex: > 4) -> Entra para Leads Restritos
+        restritosTratados++;
         const listaGruposDoLead = Array.from(setGrupos).map(gid => {
             const g = mapaGrupos.get(gid);
             return {
@@ -1213,19 +1252,16 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
             };
         });
 
-        // Se já existe um registro de Crocodilo Kelven para este lead, preserva o grupo mantido original dele
-        const crocodiloExistente = obterCrocodilo(numReal, idCampanha);
         let primeiroGrupo = null;
         let gruposParaRemover = [];
 
-        if (crocodiloExistente && crocodiloExistente.grupoMantido && setGrupos.has(crocodiloExistente.grupoMantido.id)) {
+        if (restritoExistente && restritoExistente.grupoMantido && setGrupos.has(restritoExistente.grupoMantido.id)) {
             primeiroGrupo = {
-                id: crocodiloExistente.grupoMantido.id,
-                subject: crocodiloExistente.grupoMantido.nome || obterNomeGrupo(crocodiloExistente.grupoMantido.id)
+                id: restritoExistente.grupoMantido.id,
+                subject: restritoExistente.grupoMantido.nome || obterNomeGrupo(restritoExistente.grupoMantido.id)
             };
             gruposParaRemover = listaGruposDoLead.filter(g => g.id !== primeiroGrupo.id);
         } else {
-            // Ordena: data de criação mais antiga ou numeração natural no título (ex: Grupo 01 antes de 02)
             listaGruposDoLead.sort((a, b) => {
                 if (a.creation && b.creation && a.creation !== b.creation) {
                     return a.creation - b.creation;
@@ -1236,11 +1272,11 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
             gruposParaRemover = listaGruposDoLead.slice(1);
         }
 
-        console.log(`\n🐊 [CROCODILO KELVEN IDENTIFICADO] Lead ${numReal} está em ${setGrupos.size} grupos na campanha "${nomeCampanha}"!`);
+        console.log(`\n🔒 [LEAD RESTRITO IDENTIFICADO] Lead ${numReal} está em ${setGrupos.size} grupos na campanha "${nomeCampanha}"!`);
         console.log(`   ✅ Mantido APENAS no 1º grupo acessado: "${primeiroGrupo.subject}"`);
         console.log(`   🔴 Removendo dos demais ${gruposParaRemover.length} grupos excedentes...`);
 
-        adicionarEventoFeed('ALERTA', `🐊 Crocodilo Kelven! Lead ${formatarExibicao(numReal)} em ${setGrupos.size} grupos. Mantido apenas no 1º grupo ("${primeiroGrupo.subject}") e expulso dos demais!`);
+        adicionarEventoFeed('ALERTA', `🔒 Lead Restrito! ${formatarExibicao(numReal)} em ${setGrupos.size} grupos. Mantido apenas no 1º grupo ("${primeiroGrupo.subject}") e expulso dos demais!`);
 
         registrarCrocodilo({
             numero: numReal,
@@ -1250,13 +1286,8 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
             gruposRemovidos: gruposParaRemover
         });
 
-        // Atualiza a presença em RAM para manter apenas o 1º grupo
         setGrupos.clear();
         setGrupos.add(primeiroGrupo.id);
-
-        const jidsParaTentar = [];
-        if (jidOriginal && jidOriginal.includes('@')) jidsParaTentar.push(jidOriginal);
-        jidsParaTentar.push(`${numReal}@s.whatsapp.net`, `${numReal}@lid`);
 
         for (const grp of gruposParaRemover) {
             enfileirarKickRealtime({
@@ -1272,8 +1303,8 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
         }
     }
 
-    if (crocodilosTratados > 0) {
-        console.log(`✅ [AUDITORIA CROCODILOS] ${crocodilosTratados} Crocodilos Kelven auditados e tratados na campanha "${nomeCampanha}".`);
+    if (restritosTratados > 0) {
+        console.log(`✅ [AUDITORIA RESTRITOS] ${restritosTratados} Leads Restritos auditados e tratados na campanha "${nomeCampanha}".`);
     }
 }
 
@@ -1301,6 +1332,15 @@ async function conectarSniper(indice) {
             return null;
         }
 
+        // Fecha socket anterior do mesmo slot, se existir, para evitar listeners órfãos
+        const anterior = snipersAtivos.find(x => x.indice === indice);
+        if (anterior && anterior.sock) {
+            try {
+                anterior.sock.ev.removeAllListeners();
+                if (anterior.sock.ws) anterior.sock.ws.close();
+            } catch (e) { }
+        }
+
         const { version } = await fetchLatestBaileysVersion();
         const sock = makeWASocket({
             version,
@@ -1320,12 +1360,24 @@ async function conectarSniper(indice) {
 
         return new Promise((resolve) => {
             let resolvido = false;
+            const finalizarPromise = (valor) => {
+                if (!resolvido) {
+                    resolvido = true;
+                    clearTimeout(timeoutBoot);
+                    resolve(valor);
+                }
+            };
+
+            // Timeout de segurança para nunca travar a inicialização caso um ADM esteja banido ou sem resposta
+            const timeoutBoot = setTimeout(() => {
+                finalizarPromise(null);
+            }, 15000);
 
             sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
                 if (connection === 'open') {
                     cancelarReconexao(indice);
                     const num = extrairNumeroLimpo(sock.user?.id);
-                    console.log(`[✅ ADM 0${indice}] Conectado e de olho nos grupos (+${num})`);
+                    console.log(`[✅ ADM 0${indice}] Conectado e de olho nos grupos SendFlow (+${num})`);
                     adicionarEventoFeed('ADM', `✅ Administrador 0${indice} operacional (+${formatarExibicao(num)})`);
 
                     let sniperObj = snipersAtivos.find(x => x.indice === indice);
@@ -1353,36 +1405,57 @@ async function conectarSniper(indice) {
                     mapearGruposDoSniper(sniperObj).catch(() => {});
                     setTimeout(autoSalvarBackupSessoes, 2000);
 
-                    if (!resolvido) {
-                        resolvido = true;
-                        resolve(sniperObj);
-                    }
+                    finalizarPromise(sniperObj);
                 }
                 if (connection === 'close') {
                     const sniperObj = snipersAtivos.find(x => x.indice === indice);
                     if (sniperObj) sniperObj.conectado = false;
 
+                    // Remove imediatamente este ADM do mapa de permissões de grupos para acionar failover imediato
+                    for (const setAdms of mapaAdminGrupos.values()) {
+                        setAdms.delete(indice);
+                    }
+
                     const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    const ehLogout = statusCode === DisconnectReason.loggedOut;
                     const erroMsg = lastDisconnect?.error?.message || '';
+                    const ehBanido = statusCode === 403 ||
+                                     statusCode === DisconnectReason.forbidden ||
+                                     /banned|forbidden|account.*disabled/i.test(erroMsg);
+                    const ehLogout = statusCode === DisconnectReason.loggedOut ||
+                                     statusCode === 401 ||
+                                     statusCode === 405 ||
+                                     ehBanido;
 
                     if (ehLogout) {
-                        console.log(`[❌ ADM 0${indice}] Deslogado pelo WhatsApp.`);
+                        const motivoTxt = ehBanido ? 'BANIDO/BLOQUEADO pelo WhatsApp' : 'Deslogado pelo WhatsApp';
+                        console.log(`[❌ ADM 0${indice}] ${motivoTxt} (Status ${statusCode || 'N/A'}: ${erroMsg}). Failover automático ativado nos demais ADMs!`);
+                        adicionarEventoFeed('ALERTA', `⚠️ ADM 0${indice} foi ${motivoTxt}. Failover ativo: os demais ADMs assumiram a proteção sem interrupção!`);
+
                         estadoAdms.set(indice, {
                             indice,
                             conectado: false,
-                            status: 'desconectado',
+                            status: ehBanido ? 'banido' : 'desconectado',
                             numero: null,
                             qrCodeDataUrl: null,
                             pairingCode: null,
-                            erroMsg: null,
+                            erroMsg: ehBanido ? 'Chip banido ou restrito pelo WhatsApp. Conecte outro número neste slot.' : 'Sessão desconectada pelo WhatsApp.',
                             atualizadoEm: Date.now()
                         });
                         try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
-                        if (!resolvido) { resolvido = true; resolve(null); }
+                        finalizarPromise(null);
+
+                        // Dispara re-verificação imediata com os ADMs sobreviventes para nenhuma regra deixar de ser aplicada
+                        setTimeout(() => {
+                            processarFilaKicksRealtime().catch(() => {});
+                            executarPatrulhaContinua().catch(() => {});
+                        }, 1500);
                     } else {
                         console.log(`[⚠️ ADM 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'} - ${erroMsg}). Reconectando em 3s...`);
                         agendarReconexao(indice, 3000);
+                        finalizarPromise(null);
+                        setTimeout(() => {
+                            processarFilaKicksRealtime().catch(() => {});
+                        }, 500);
                     }
                 }
             });
@@ -1411,6 +1484,9 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
             if (sExistente.sock.ws) sExistente.sock.ws.close();
         } catch (e) { }
         snipersAtivos.splice(idxExistente, 1);
+    }
+    for (const setAdms of mapaAdminGrupos.values()) {
+        setAdms.delete(indice);
     }
 
     // Como o usuário está solicitando uma NOVA conexão manual (QR ou Código) para este slot,
@@ -1531,21 +1607,29 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
         // 3. FECHADO (RECONEXÃO AUTOMÁTICA PÓS-PAREAMENTO)
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const ehLogout = statusCode === DisconnectReason.loggedOut;
             const erroMsg = lastDisconnect?.error?.message || '';
+            const ehBanido = statusCode === 403 ||
+                             statusCode === DisconnectReason.forbidden ||
+                             /banned|forbidden|account.*disabled/i.test(erroMsg);
+            const ehLogout = statusCode === DisconnectReason.loggedOut || ehBanido;
 
             console.log(`[⚠️ ADM 0${indice}] Conexão fechada durante pareamento (Status ${statusCode || 'Drop'}: ${erroMsg})`);
 
             let sniperObj = snipersAtivos.find(x => x.indice === indice);
             if (sniperObj) sniperObj.conectado = false;
 
+            for (const setAdms of mapaAdminGrupos.values()) {
+                setAdms.delete(indice);
+            }
+
             if (ehLogout) {
-                console.log(`[❌ ADM 0${indice}] Deslogado pelo WhatsApp.`);
+                console.log(`[❌ ADM 0${indice}] ${ehBanido ? 'Banido' : 'Deslogado'} pelo WhatsApp.`);
                 estado.conectado = false;
-                estado.status = 'desconectado';
+                estado.status = ehBanido ? 'banido' : 'desconectado';
                 estado.numero = null;
                 estado.qrCodeDataUrl = null;
                 estado.pairingCode = null;
+                estado.erroMsg = ehBanido ? 'Chip banido ou restrito pelo WhatsApp.' : null;
                 estado.atualizadoEm = Date.now();
                 try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
             } else {
@@ -1583,6 +1667,10 @@ async function desconectarAdm(indice) {
             else if (s.sock.ws) s.sock.ws.close();
         } catch (e) { }
         snipersAtivos.splice(idx, 1);
+    }
+
+    for (const setAdms of mapaAdminGrupos.values()) {
+        setAdms.delete(indice);
     }
 
     if (fs.existsSync(pastaAuth)) {
@@ -1637,11 +1725,13 @@ async function banirPermanente(numeroAlvo, motivo = 'Banimento Permanente Manual
 
     adicionarEventoFeed('BAN_PERMANENTE', `⛔ [BAN PERMANENTE] ${formatarExibicao(numLimpo)} banido! Motivo: ${motivo}`);
 
-    // Expulsa de TODOS os grupos catalogados
-    const todosGrupos = [
-        ...Array.from(gruposBlackOficiais.values()),
-        ...Array.from(gruposBaseForteOficiais.values())
-    ];
+    // Expulsa de TODOS os grupos catalogados de TODAS as campanhas SendFlow ativas
+    const todosGruposMap = new Map();
+    for (const [idCampanha, mapaGrupos] of mapaGruposPorCampanha.entries()) {
+        for (const [gid, g] of mapaGrupos.entries()) {
+            todosGruposMap.set(gid, { grupo: g, idCampanha });
+        }
+    }
 
     const jidsParaTentar = [
         `${numLimpo}@s.whatsapp.net`,
@@ -1649,22 +1739,27 @@ async function banirPermanente(numeroAlvo, motivo = 'Banimento Permanente Manual
     ];
 
     let gruposAfetados = 0;
-    for (const g of todosGrupos) {
-        const estaPresente = (g.participants || []).some(p => {
+    for (const [gid, { grupo: g, idCampanha }] of todosGruposMap.entries()) {
+        const infoCamp = obterInfoCompletaCampanha(gid, g.subject);
+        if (!infoCamp) continue;
+
+        const mapaPresencaAlvo = obterPresencaCampanha(idCampanha);
+        const estaPresenteNaPresenca = mapaPresencaAlvo.get(idNorm)?.has(gid);
+        const estaPresenteNosParticipantes = (g.participants || []).some(p => {
             const pNum = extrairNumeroParticipante(p);
             return pNum && (pNum === numLimpo || (idNorm && normalizarID(pNum) === idNorm));
         });
 
-        if (estaPresente) {
+        if (estaPresenteNaPresenca || estaPresenteNosParticipantes) {
             gruposAfetados++;
             enfileirarKickRealtime({
-                idGrupo: g.id,
-                nomeGrupo: g.subject || g.id,
-                tagCampanha: identificarCampanha(g.subject) || 'GRUPO',
+                idGrupo: g.id || gid,
+                nomeGrupo: g.subject || infoCamp.nomeGrupo || gid,
+                tagCampanha: infoCamp.nomeCampanha || 'CAMPANHA',
                 numReal: numLimpo,
                 idNorm: idNorm,
                 jidsParaTentar,
-                mapaPresencaAlvo: presencaBlack,
+                mapaPresencaAlvo,
                 ehBanPermanente: true
             });
         }
@@ -1684,7 +1779,6 @@ function desbanir(numeroAlvo) {
     const idNorm = normalizarID(numLimpo);
 
     let lista = carregarBlacklist();
-    const antes = lista.length;
     lista = lista.filter(x => {
         const xNum = extrairNumeroLimpo(x.numero);
         if (xNum === numLimpo) return false;
@@ -1693,7 +1787,7 @@ function desbanir(numeroAlvo) {
         return true;
     });
 
-    // Remove também da lista de Crocodilos Kelven se estiver nela
+    // Remove também da lista de Leads Restritos se estiver nela
     removerCrocodilo(numLimpo);
 
     // Limpa travas de redundância para que possa reentrar sem esperar 30s
@@ -1710,7 +1804,7 @@ function desbanir(numeroAlvo) {
 }
 
 // =====================================================================
-// 🎯 FASE 1: VARREDURA E LIMPEZA INICIAL (TODAS AS CAMPANHAS ATIVAS DO SENDFLOW)
+// 🎯 FASE 1: VARREDURA E LIMPEZA INICIAL (APENAS CAMPANHAS ATIVAS DO SENDFLOW)
 // =====================================================================
 async function executarLimpezaInicial() {
     configAtual = carregarConfig();
@@ -1718,11 +1812,11 @@ async function executarLimpezaInicial() {
     const limiteBan = configAtual.limiteBanPermanente;
 
     const cacheSendflow = getCacheCampanhas();
-    const totalCampAtivas = cacheSendflow.totalCampanhasAtivas || 2;
+    const totalCampAtivas = cacheSendflow.totalCampanhasAtivas || 0;
 
     console.log('\n=================================================================');
-    console.log(`🛡️  FASE 1: MAPEANDO GRUPOS DE TODAS AS CAMPANHAS ATIVAS DO SENDFLOW (${totalCampAtivas} campanhas)...`);
-    console.log(`📌  Regra Saturação: Máx. ${limiteMax} grupos por pessoa na mesma campanha`);
+    console.log(`🛡️  FASE 1: MAPEANDO EXCLUSIVAMENTE GRUPOS VINCULADOS NO SENDFLOW (${totalCampAtivas} campanhas)...`);
+    console.log(`📌  Regra Saturação (Lead Restrito): Máx. ${limiteMax} grupos por pessoa na mesma campanha`);
     console.log(`⛔  Regra Ban Permanente: Acima de ${limiteBan} links = Ban total + Remoção de TODOS os grupos`);
     console.log('=================================================================');
 
@@ -1731,15 +1825,17 @@ async function executarLimpezaInicial() {
     mapaGruposPorCampanha.clear();
     mapaPresencaPorCampanha.clear();
 
-    for (const sniper of snipersAtivos) {
+    const snipersOperacionais = snipersAtivos.filter(sniperEstaOperacional);
+    for (const sniper of snipersOperacionais) {
         try {
             const all = await sniper.sock.groupFetchAllParticipating();
             for (const id in all) {
                 const g = all[id];
+                // REGRA ESTRITA: Ignora completamente grupos antigos que não pertençam às campanhas SendFlow
                 const infoCamp = obterInfoCompletaCampanha(id, g.subject);
-                if (!infoCamp) continue;
+                if (!infoCamp || !infoCamp.idCampanha) continue;
 
-                const { idCampanha, nomeCampanha } = infoCamp;
+                const { idCampanha } = infoCamp;
                 const mapaGruposDestaCampanha = obterGruposCampanha(idCampanha);
 
                 for (const p of (g.participants || [])) {
@@ -1782,7 +1878,7 @@ async function executarLimpezaInicial() {
 
     async function auditarELimparCampanha(idCampanha, nomeCampanha, listaGrupos, mapaPresencaRAM) {
         console.log(`\n-------------------------------------------------------------`);
-        console.log(`🔍 AUDITANDO: ${nomeCampanha} (${listaGrupos.length} grupos)`);
+        console.log(`🔍 AUDITANDO: ${nomeCampanha} (${listaGrupos.length} grupos SendFlow)`);
         console.log(`-------------------------------------------------------------`);
 
         const mapaAlvos = new Map();
@@ -1873,14 +1969,42 @@ async function executarLimpezaInicial() {
                 continue;
             }
 
+            // Verifica se já era um Lead Restrito tentando permanecer em grupo diferente do 1º grupo permitido
+            const restritoExistente = obterCrocodilo(dados.numero, idCampanha);
+            if (restritoExistente && restritoExistente.grupoMantido && dados.grupos.length <= limiteMax) {
+                const idMantido = restritoExistente.grupoMantido.id;
+                const extras = dados.grupos.filter(g => g.id !== idMantido);
+                if (extras.length > 0) {
+                    filaRemocoes.push({
+                        numero: dados.numero,
+                        idNorm: idN,
+                        jidOriginal: dados.jidOriginal,
+                        totalGrupos: dados.grupos.length,
+                        manter: restritoExistente.grupoMantido,
+                        remover: extras,
+                        ehBanPermanente: false
+                    });
+                }
+                continue;
+            }
+
             if (dados.grupos.length > limiteMax) {
                 dados.grupos.sort((a, b) => {
                     if (a.creation && b.creation && a.creation !== b.creation) return a.creation - b.creation;
                     return a.subject.localeCompare(b.subject, undefined, { numeric: true });
                 });
 
-                const manter = dados.grupos[0];
-                const remover = dados.grupos.slice(1);
+                const manter = (restritoExistente && restritoExistente.grupoMantido && dados.grupos.find(g => g.id === restritoExistente.grupoMantido.id))
+                    || dados.grupos[0];
+                const remover = dados.grupos.filter(g => g.id !== manter.id);
+
+                registrarCrocodilo({
+                    numero: dados.numero,
+                    idCampanha,
+                    nomeCampanha,
+                    grupoMantido: manter,
+                    gruposRemovidos: remover
+                });
 
                 filaRemocoes.push({
                     numero: dados.numero,
@@ -1908,7 +2032,7 @@ async function executarLimpezaInicial() {
 
         for (let i = 0; i < filaRemocoes.length; i++) {
             const item = filaRemocoes[i];
-            const destinoTxt = item.ehBanPermanente ? 'NENHUM (BAN PERMANENTE TOTAL)' : `Mantido: "${item.manter?.subject}"`;
+            const destinoTxt = item.ehBanPermanente ? 'NENHUM (BAN PERMANENTE TOTAL)' : `Mantido: "${item.manter?.subject || item.manter?.nome}"`;
             console.log(`[${i + 1}/${filaRemocoes.length}] ${item.numero} (${item.totalGrupos} grps) -> ${destinoTxt}`);
 
             for (const grp of item.remover) {
@@ -1918,7 +2042,6 @@ async function executarLimpezaInicial() {
                     console.log(`   ⚠️ [FALHA] Nenhum ADM conectado disponível para remover de "${grp.subject}".`);
                     continue;
                 }
-                const operador = snipersDisponiveis[rotador % snipersDisponiveis.length];
 
                 const jidsParaTentar = [];
                 if (item.jidOriginal && item.jidOriginal.includes('@')) jidsParaTentar.push(item.jidOriginal);
@@ -1934,17 +2057,29 @@ async function executarLimpezaInicial() {
 
                 let kickOk = false;
                 let erroMsg = '';
-                for (const jidAlvo of jidsParaTentar) {
-                    try {
-                        await operador.sock.groupParticipantsUpdate(grp.id, [jidAlvo], 'remove');
-                        sucessos++;
-                        console.log(`   🔴 [KICK] Removido de "${grp.subject}" (ADM 0${operador.indice})`);
-                        mapaPresencaRAM.get(item.idNorm)?.delete(grp.id);
-                        kickOk = true;
-                        break;
-                    } catch (err) {
-                        erroMsg = err?.message || err;
+                // Failover entre todos os ADMs disponíveis para este grupo (em ordem de prioridade e rotacionados)
+                for (const operador of snipersDisponiveis) {
+                    if (!sniperEstaOperacional(operador)) continue;
+
+                    for (const jidAlvo of jidsParaTentar) {
+                        try {
+                            await operador.sock.groupParticipantsUpdate(grp.id, [jidAlvo], 'remove');
+                            if (!mapaAdminGrupos.has(grp.id)) mapaAdminGrupos.set(grp.id, new Set());
+                            mapaAdminGrupos.get(grp.id).add(operador.indice);
+                            sucessos++;
+                            console.log(`   🔴 [KICK] Removido de "${grp.subject}" (ADM 0${operador.indice})`);
+                            mapaPresencaRAM.get(item.idNorm)?.delete(grp.id);
+                            kickOk = true;
+                            break;
+                        } catch (err) {
+                            erroMsg = err?.message || err;
+                            if (/forbidden|not-authorized|403/i.test(String(erroMsg))) {
+                                mapaAdminGrupos.get(grp.id)?.delete(operador.indice);
+                                break; // Passa imediatamente para o próximo ADM com permissão no grupo
+                            }
+                        }
                     }
+                    if (kickOk) break;
                 }
 
                 if (!kickOk) {
@@ -1958,13 +2093,14 @@ async function executarLimpezaInicial() {
         console.log(`🏁 [${nomeCampanha}] Limpeza concluída: ${sucessos}/${totalKicks} kicks executados.`);
     }
 
-    // Audita todas as campanhas ativas mapeadas
+    // Audita todas as campanhas ativas mapeadas do SendFlow
     for (const [idCampanha, mapaGrupos] of mapaGruposPorCampanha.entries()) {
         const listaGrupos = Array.from(mapaGrupos.values()).filter(g => g.participants && g.participants.length > 0);
         if (listaGrupos.length === 0) continue;
 
         const infoExemplo = obterInfoCompletaCampanha(listaGrupos[0].id, listaGrupos[0].subject);
-        const nomeCampanha = infoExemplo ? infoExemplo.nomeCampanha : idCampanha;
+        if (!infoExemplo) continue;
+        const nomeCampanha = infoExemplo.nomeCampanha || idCampanha;
         const presencaCampanha = obterPresencaCampanha(idCampanha);
 
         await auditarELimparCampanha(idCampanha, nomeCampanha, listaGrupos, presencaCampanha);
@@ -1972,7 +2108,7 @@ async function executarLimpezaInicial() {
 }
 
 // =====================================================================
-// 🛑 FILA SERIALIZADA DE KICKS REALTIME (ANTI-RATE-LIMIT & ANTI-BAN)
+// 🛑 FILA SERIALIZADA DE KICKS REALTIME (ANTI-RATE-LIMIT & FAILOVER TOTAL)
 // =====================================================================
 const filaKicksRealtime = [];
 let processandoFilaRealtime = false;
@@ -1980,92 +2116,118 @@ let rotadorRealtime = 0;
 
 function enfileirarKickRealtime(dados) {
     filaKicksRealtime.push(dados);
-    processarFilaKicksRealtime();
+    processarFilaKicksRealtime().catch(() => {});
 }
 
 async function processarFilaKicksRealtime() {
     if (processandoFilaRealtime) return;
     processandoFilaRealtime = true;
 
-    while (filaKicksRealtime.length > 0) {
-        const item = filaKicksRealtime[0];
-        item.tentativas = (item.tentativas || 0) + 1;
+    try {
+        while (filaKicksRealtime.length > 0) {
+            const item = filaKicksRealtime[0];
+            item.tentativas = (item.tentativas || 0) + 1;
 
-        const snipersDisponiveis = obterSnipersDisponiveis(item.idGrupo);
+            const snipersDisponiveis = obterSnipersDisponiveis(item.idGrupo);
 
-        if (snipersDisponiveis.length === 0) {
-            if (item.tentativas <= 5) {
-                console.log(`[⏳ CATRACA] ADMs reconectando. Aguardando 2.5s para expulsar ${item.numReal} de "${item.nomeGrupo}" (Tentativa ${item.tentativas}/5)...`);
-                await sleep(2500);
-                continue;
-            } else {
-                console.log(`[!] Erro definitivo: Nenhum ADM conectado com permissão em "${item.nomeGrupo}" após 5 tentativas.`);
-                filaKicksRealtime.shift();
-                continue;
-            }
-        }
-
-        let removido = false;
-        let ultimoErro = null;
-
-        for (let s = 0; s < snipersDisponiveis.length; s++) {
-            rotadorRealtime++;
-            const operador = snipersDisponiveis[rotadorRealtime % snipersDisponiveis.length];
-
-            if (!operador.conectado || !operador.sock?.ws?.isOpen) continue;
-
-            for (const jidAlvo of item.jidsParaTentar) {
-                try {
-                    await operador.sock.groupParticipantsUpdate(item.idGrupo, [jidAlvo], 'remove');
-                    if (item.mapaPresencaAlvo) {
-                        item.mapaPresencaAlvo.get(item.idNorm)?.delete(item.idGrupo);
-                    }
-                    const tagAcao = item.ehBanPermanente ? '⛔ [BAN PERMANENTE TOTAL]' : '⛔ [BARRADO PELA CATRACA]';
-                    console.log(`${tagAcao} ${item.numReal} expulso de "${item.nomeGrupo}" (${item.tagCampanha}) pelo ADM 0${operador.indice}.`);
-                    adicionarEventoFeed('EXPULSAO', `${tagAcao} ${formatarExibicao(item.numReal)} expulso de "${item.nomeGrupo}" (${item.tagCampanha})`);
-                    removido = true;
-                    break;
-                } catch (err) {
-                    ultimoErro = err?.message || err;
+            if (snipersDisponiveis.length === 0) {
+                if (item.tentativas <= 6) {
+                    console.log(`[⏳ CATRACA] Aguardando ADM operacional para expulsar ${item.numReal} de "${item.nomeGrupo}" (Tentativa ${item.tentativas}/6)...`);
+                    await sleep(2500);
+                    continue;
+                } else {
+                    console.log(`[!] Nenhum ADM operacional disponível para "${item.nomeGrupo}" após 6 tentativas. A patrulha contínua removerá na próxima varredura.`);
+                    filaKicksRealtime.shift();
+                    continue;
                 }
             }
-            if (removido) break;
-        }
 
-        if (removido) {
-            filaKicksRealtime.shift();
-        } else {
-            const erroStr = String(ultimoErro).toLowerCase();
-            const ehErroConexao = erroStr.includes('connection closed') ||
-                                  erroStr.includes('websocket') ||
-                                  erroStr.includes('timed out') ||
-                                  erroStr.includes('closed');
+            let removido = false;
+            let ultimoErro = null;
 
-            if (ehErroConexao && item.tentativas <= 5) {
-                console.log(`[⏳ CATRACA] Conexão oscilou ao expulsar de "${item.nomeGrupo}". Aguardando 2s (${item.tentativas}/5)...`);
-                await sleep(2000);
-                continue;
-            } else {
-                console.log(`[!] Erro ao expulsar ${item.numReal} de "${item.nomeGrupo}": ${ultimoErro}`);
-                filaKicksRealtime.shift();
+            // Tenta com todos os ADMs disponíveis (priorizando os que são admin do grupo e fazendo failover para os demais)
+            for (const operador of snipersDisponiveis) {
+                if (!sniperEstaOperacional(operador)) continue;
+
+                for (const jidAlvo of item.jidsParaTentar) {
+                    try {
+                        await operador.sock.groupParticipantsUpdate(item.idGrupo, [jidAlvo], 'remove');
+                        if (!mapaAdminGrupos.has(item.idGrupo)) mapaAdminGrupos.set(item.idGrupo, new Set());
+                        mapaAdminGrupos.get(item.idGrupo).add(operador.indice);
+                        if (item.mapaPresencaAlvo) {
+                            item.mapaPresencaAlvo.get(item.idNorm)?.delete(item.idGrupo);
+                        }
+                        const tagAcao = item.ehBanPermanente ? '⛔ [BAN PERMANENTE TOTAL]' : '⛔ [BARRADO PELA CATRACA]';
+                        console.log(`${tagAcao} ${item.numReal} expulso de "${item.nomeGrupo}" (${item.tagCampanha}) pelo ADM 0${operador.indice}.`);
+                        adicionarEventoFeed('EXPULSAO', `${tagAcao} ${formatarExibicao(item.numReal)} expulso de "${item.nomeGrupo}" (${item.tagCampanha})`);
+                        removido = true;
+                        break;
+                    } catch (err) {
+                        ultimoErro = err?.message || err;
+                        if (/forbidden|not-authorized|403/i.test(String(ultimoErro))) {
+                            mapaAdminGrupos.get(item.idGrupo)?.delete(operador.indice);
+                            break; // Tenta imediatamente o próximo ADM operacional
+                        }
+                    }
+                }
+                if (removido) break;
             }
+
+            if (removido) {
+                filaKicksRealtime.shift();
+            } else {
+                const erroStr = String(ultimoErro).toLowerCase();
+                const ehErroConexao = erroStr.includes('connection closed') ||
+                                      erroStr.includes('websocket') ||
+                                      erroStr.includes('timed out') ||
+                                      erroStr.includes('closed');
+
+                if (ehErroConexao && item.tentativas <= 6) {
+                    console.log(`[⏳ CATRACA] Conexão oscilou ao expulsar de "${item.nomeGrupo}". Tentando novamente em 2s (${item.tentativas}/6)...`);
+                    await sleep(2000);
+                    continue;
+                } else {
+                    console.log(`[!] Erro ao expulsar ${item.numReal} de "${item.nomeGrupo}": ${ultimoErro}`);
+                    filaKicksRealtime.shift();
+                }
+            }
+
+            await sleep(1500 + Math.floor(Math.random() * 800));
         }
-
-        await sleep(1500 + Math.floor(Math.random() * 800));
+    } finally {
+        processandoFilaRealtime = false;
     }
-
-    processandoFilaRealtime = false;
 }
 
 // =====================================================================
-// 🛑 FASE 2: CATRACA SENTINELA 24/7 (TODAS AS CAMPANHAS ATIVAS DO SENDFLOW)
+// 🛑 FASE 2: CATRACA SENTINELA 24/7 (EXCLUSIVAMENTE GRUPOS DO SENDFLOW)
 // =====================================================================
 function vincularListenersRealtime(sniper) {
     if (!sniper || !sniper.sock) return;
-    if (sniper.listenerVinculado) return;
-    sniper.listenerVinculado = true;
+    // IMPORTANTE: Vincula a flag na instância atual do socket (sniper.sock) e NÃO no wrapper sniperObj,
+    // garantindo que qualquer reconexão de ADM re-vincule os eventos em tempo real no novo socket!
+    if (sniper.sock.__aegisListenerVinculado) return;
+    sniper.sock.__aegisListenerVinculado = true;
 
     sniper.sock.ev.on('group-participants.update', async (evento) => {
+        if (!evento || !evento.id) return;
+
+        // Se alguém foi removido/saiu, atualiza presença em RAM caso seja grupo monitorado
+        if (evento.action === 'remove' || evento.action === 'leave') {
+            const infoSaida = obterInfoCompletaCampanha(evento.id, null);
+            if (infoSaida && infoSaida.idCampanha) {
+                const mapaPresenca = obterPresencaCampanha(infoSaida.idCampanha);
+                for (const part of (evento.participants || [])) {
+                    const idBruto = typeof part === 'object' ? (part.id || part.jid || '') : String(part);
+                    let num = extrairNumeroLimpo(idBruto);
+                    if (idBruto.includes('@lid') && mapaLidParaTelefone.has(num)) num = mapaLidParaTelefone.get(num);
+                    const idN = normalizarID(num);
+                    if (idN) mapaPresenca.get(idN)?.delete(evento.id);
+                }
+            }
+            return;
+        }
+
         if (evento.action !== 'add') return;
 
         const idGrupo = evento.id;
@@ -2074,46 +2236,32 @@ function vincularListenersRealtime(sniper) {
 
         if (!infoCamp) {
             try {
-                const meta = await sniper.sock.groupMetadata(idGrupo);
-                nomeGrupo = meta?.subject || idGrupo;
-                infoCamp = obterInfoCompletaCampanha(idGrupo, nomeGrupo);
-                if (infoCamp) {
-                    const mapaGrupos = obterGruposCampanha(infoCamp.idCampanha);
-                    if (!mapaGrupos.has(idGrupo)) mapaGrupos.set(idGrupo, meta);
+                const meta = await obterMetadataGrupoResiliente(idGrupo, sniper);
+                if (meta) {
+                    nomeGrupo = meta.subject || idGrupo;
+                    infoCamp = obterInfoCompletaCampanha(idGrupo, nomeGrupo);
+                    if (infoCamp && infoCamp.idCampanha) {
+                        const mapaGrupos = obterGruposCampanha(infoCamp.idCampanha);
+                        if (!mapaGrupos.has(idGrupo)) mapaGrupos.set(idGrupo, meta);
+                    }
                 }
             } catch (e) { }
         } else {
             nomeGrupo = infoCamp.nomeGrupo || idGrupo;
         }
 
-        // Se ainda não identificou pelo cache, herda a campanha do próprio sniper que recebeu o evento
-        const metaSniper = obterMetaSniper(sniper.indice);
-        if (!infoCamp && metaSniper && metaSniper.campaignId) {
-            infoCamp = {
-                idCampanha: metaSniper.campaignId,
-                nomeCampanha: metaSniper.campaignName || 'Campanha do Sniper',
-                nomeGrupo: nomeGrupo
-            };
-            const mapaGrupos = obterGruposCampanha(infoCamp.idCampanha);
-            if (!mapaGrupos.has(idGrupo)) {
-                mapaGrupos.set(idGrupo, { id: idGrupo, subject: nomeGrupo });
-            }
-        }
-
-        // Se ainda assim for nulo, monitora em monitoramento geral
-        if (!infoCamp) {
-            infoCamp = {
-                idCampanha: 'GLOBAL',
-                nomeCampanha: 'Campanha Geral',
-                nomeGrupo: nomeGrupo
-            };
+        // REGRA ESTRITA DO USUÁRIO:
+        // Se o grupo NÃO pertence a nenhuma campanha vinculada no SendFlow / aba Campanhas SendFlow & ADMs,
+        // ignora completamente o evento (não vigia grupos antigos em que o chip já estava).
+        if (!infoCamp || !infoCamp.idCampanha) {
+            return;
         }
 
         const idCampanha = infoCamp.idCampanha;
         const tagCampanha = infoCamp.nomeCampanha;
         const mapaPresencaAlvo = obterPresencaCampanha(idCampanha);
 
-        for (const novato of evento.participants) {
+        for (const novato of (evento.participants || [])) {
             let idNovatoBruto = typeof novato === 'object' ? (novato.id || novato.jid || '') : String(novato);
             if (!idNovatoBruto) continue;
 
@@ -2178,19 +2326,18 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
-            // 🐊 CHECAGEM CROCODILO KELVEN PREEXISTENTE
-            // Regra: se o lead já é um Crocodilo Kelven, só tem permissão de estar no 1º grupo acessado.
+            // 🔒 CHECAGEM DE LEAD RESTRITO PREEXISTENTE
+            // Regra: se o lead já está na lista de Restritos, só tem permissão de estar no 1º grupo acessado.
             // Qualquer tentativa de entrar em outro grupo = EXPULSÃO IMEDIATA.
-            const crocodiloExistente = obterCrocodilo(numReal, idCampanha);
-            if (crocodiloExistente && crocodiloExistente.grupoMantido) {
-                if (crocodiloExistente.grupoMantido.id !== idGrupo) {
-                    console.log(`\n🐊 [CATRACA - CROCODILO BARRADO] ${numReal} é um Crocodilo Kelven!`);
+            const restritoExistente = obterCrocodilo(numReal, idCampanha);
+            if (restritoExistente && restritoExistente.grupoMantido) {
+                if (restritoExistente.grupoMantido.id !== idGrupo) {
+                    console.log(`\n🔒 [CATRACA - LEAD RESTRITO BARRADO] ${numReal} está na lista de Restritos!`);
                     console.log(`   Tentou entrar em: "${nomeGrupo}" (${tagCampanha})`);
-                    console.log(`   Permitido exclusivamente no 1º grupo que acessou: "${crocodiloExistente.grupoMantido.nome}". EXPULSANDO DO NOVO GRUPO...`);
-                    adicionarEventoFeed('ALERTA', `🐊 Crocodilo ${formatarExibicao(numReal)} barrado em "${nomeGrupo}"! Removido para permanecer apenas em seu 1º grupo ("${crocodiloExistente.grupoMantido.nome}").`);
+                    console.log(`   Permitido exclusivamente no 1º grupo que acessou: "${restritoExistente.grupoMantido.nome}". EXPULSANDO DO NOVO GRUPO...`);
+                    adicionarEventoFeed('ALERTA', `🔒 Lead Restrito ${formatarExibicao(numReal)} barrado em "${nomeGrupo}"! Removido para permanecer apenas em seu 1º grupo ("${restritoExistente.grupoMantido.nome}").`);
 
-                    // Atualiza histórico de tentativas barradas deste Crocodilo
-                    registrarTentativaEntradaCrocodilo(crocodiloExistente, { id: idGrupo, subject: nomeGrupo });
+                    registrarTentativaEntradaCrocodilo(restritoExistente, { id: idGrupo, subject: nomeGrupo });
 
                     enfileirarKickRealtime({
                         idGrupo,
@@ -2204,8 +2351,8 @@ function vincularListenersRealtime(sniper) {
                     });
                     continue;
                 } else {
-                    console.log(`🐊 [CATRACA - CROCODILO NO 1º GRUPO PERMITIDO] ${numReal} entrou em "${nomeGrupo}", que é o seu 1º grupo permitido.`);
-                    adicionarEventoFeed('ALERTA', `🐊 Crocodilo ${formatarExibicao(numReal)} entrou em seu 1º grupo permitido ("${nomeGrupo}").`);
+                    console.log(`🔒 [CATRACA - LEAD RESTRITO NO 1º GRUPO PERMITIDO] ${numReal} entrou em "${nomeGrupo}", que é o seu 1º grupo permitido.`);
+                    adicionarEventoFeed('ALERTA', `🔒 Lead Restrito ${formatarExibicao(numReal)} entrou em seu 1º grupo permitido ("${nomeGrupo}").`);
                     continue;
                 }
             }
@@ -2258,10 +2405,7 @@ function vincularListenersRealtime(sniper) {
                 continue;
             }
 
-            // 🐊 REGRA 4: CROCODILOS KELVEN (> limiteMax, ex: > 4 grupos)
-            // Regra do Usuário: "se eu estiver acima de 4 grupos, deve ser removido de todos os grupos,
-            // ficando apenas o PRIMEIRO GRUPO QUE ELE ACESSOU, quando esse lead atingir esse limite,
-            // ele entra na lista dos 'Crocodilo Kelven', e toda vez que tentar entrar em mais um grupo ele será removido."
+            // 🔒 REGRA 4: LEADS RESTRITOS (> limiteMax, ex: > 4 grupos)
             if (gruposDoLead.size > limiteMax) {
                 const mapaGrupos = obterGruposCampanha(idCampanha);
                 const listaGruposDoLead = Array.from(gruposDoLead).map(gid => {
@@ -2273,10 +2417,6 @@ function vincularListenersRealtime(sniper) {
                     };
                 });
 
-                // Ordenação inteligente para garantir que o 1º grupo que ele acessou seja mantido:
-                // 1) O grupo recém-entrado agora (idGrupo) vai para o final porque foi o último grupo onde ele entrou!
-                // 2) Se houver datas de criação válidas e diferentes, pega a mais antiga
-                // 3) Desempate por ordenação alfanumérica natural do nome (ex: Grupo 01 antes de Grupo 02)
                 listaGruposDoLead.sort((a, b) => {
                     if (a.id === idGrupo && b.id !== idGrupo) return 1;
                     if (b.id === idGrupo && a.id !== idGrupo) return -1;
@@ -2289,10 +2429,10 @@ function vincularListenersRealtime(sniper) {
                 const primeiroGrupo = listaGruposDoLead[0];
                 const gruposParaRemover = listaGruposDoLead.slice(1);
 
-                console.log(`\n🐊 [ALERTA CATRACA - CROCODILO KELVEN] Lead ${numReal} atingiu ${gruposDoLead.size} grupos em ${tagCampanha} (> limite ${limiteMax})!`);
+                console.log(`\n🔒 [ALERTA CATRACA - LEAD RESTRITO] Lead ${numReal} atingiu ${gruposDoLead.size} grupos em ${tagCampanha} (> limite ${limiteMax})!`);
                 console.log(`   ✅ Mantendo APENAS o 1º grupo acessado: "${primeiroGrupo.subject}"`);
                 console.log(`   🔴 Expulsando de TODOS os outros ${gruposParaRemover.length} grupos excedentes...`);
-                adicionarEventoFeed('ALERTA', `🐊 Crocodilo Kelven! Lead ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size} grupos em ${tagCampanha}. Mantido apenas no 1º grupo ("${primeiroGrupo.subject}") e expulso dos demais!`);
+                adicionarEventoFeed('ALERTA', `🔒 Lead Restrito! ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size} grupos em ${tagCampanha}. Mantido apenas no 1º grupo ("${primeiroGrupo.subject}") e expulso dos demais!`);
 
                 registrarCrocodilo({
                     numero: numReal,
@@ -2325,6 +2465,65 @@ function vincularListenersRealtime(sniper) {
 }
 
 // =====================================================================
+// 🔄 PATRULHA CONTÍNUA 24/7 (WATCHDOG RESILIENTE ANTI-PARADA)
+// =====================================================================
+let intervaloPatrulhaContinua = null;
+let patrulhaEmExecucao = false;
+
+async function executarPatrulhaContinua() {
+    if (patrulhaEmExecucao) return;
+    patrulhaEmExecucao = true;
+
+    try {
+        // 1. Garante que qualquer ADM cadastrado que tenha sessão válida em disco (e não esteja banido nem gerando QR/Código) esteja conectado
+        const snipersCadastrados = carregarSnipersCampanhas();
+        for (const s of snipersCadastrados) {
+            const idNum = Number(s.id || s.indice);
+            if (!idNum) continue;
+
+            const ativo = snipersAtivos.find(x => x.indice === idNum);
+            if (ativo && sniperEstaOperacional(ativo)) {
+                vincularListenersRealtime(ativo);
+                continue;
+            }
+
+            const est = estadoAdms.get(idNum);
+            const emPareamento = est && ['gerando_qr', 'qr_pronto', 'solicitando_codigo', 'codigo_pronto', 'banido'].includes(est.status);
+            if (emPareamento || timersReconexao.has(idNum)) continue;
+
+            const pastaAuth = obterPastaAuth(idNum);
+            if (fs.existsSync(path.join(pastaAuth, 'creds.json'))) {
+                conectarSniper(idNum).catch(() => {});
+            }
+        }
+
+        // 2. Re-mapeia e audita todas as campanhas ativas do SendFlow usando os ADMs operacionais sobreviventes
+        const operacionais = snipersAtivos.filter(sniperEstaOperacional);
+        if (operacionais.length === 0) return;
+
+        for (const sniper of operacionais) {
+            vincularListenersRealtime(sniper);
+            await mapearGruposDoSniper(sniper);
+        }
+
+        // Processa eventuais kicks pendentes na fila
+        processarFilaKicksRealtime().catch(() => {});
+    } catch (err) {
+        console.error('[!] Erro na Patrulha Contínua:', err.message);
+    } finally {
+        patrulhaEmExecucao = false;
+    }
+}
+
+function iniciarPatrulhaContinua() {
+    if (intervaloPatrulhaContinua) clearInterval(intervaloPatrulhaContinua);
+    // A cada 60 segundos, verifica integridade dos sockets, faz failover e audita todos os grupos SendFlow
+    intervaloPatrulhaContinua = setInterval(() => {
+        executarPatrulhaContinua().catch(() => {});
+    }, 60 * 1000);
+}
+
+// =====================================================================
 // 🚀 INICIALIZADOR DO MOTOR UNIFICADO
 // =====================================================================
 async function iniciarOperacaoAegisCompleta() {
@@ -2340,39 +2539,43 @@ async function iniciarOperacaoAegisCompleta() {
 ██║  ██║███████╗╚██████╔╝██║███████║    ██████╦╝███████╗██║  ██║╚██████╗██║  ██╗
 ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
     `);
-    console.log('🛡️  MOTOR UNIFICADO AEGIS: TODAS AS CAMPANHAS ATIVAS DO SENDFLOW');
+    console.log('🛡️  MOTOR UNIFICADO AEGIS: EXCLUSIVO PARA CAMPANHAS SENDFLOW & ADMS');
     console.log(`📌  Configuração Atual: Máx. ${configAtual.limiteGruposPorCampanha} Grupos por pessoa na mesma campanha | Ban Permanente: > ${configAtual.limiteBanPermanente} links`);
     console.log(`🤖  Frota de ADMs (Administradores dos Grupos): ${qtdAdms} contas configuradas`);
     console.log('=================================================================\n');
 
-    // 1. Carregar campanhas e grupos locais do cache (protegendo a chave de API do SendFlow contra rate-limit no boot)
+    // 1. Carregar campanhas e grupos locais do cache e iniciar agendamento com callback de re-auditoria
     carregarCampanhasLocais();
-    iniciarAgendamento12Horas();
+    iniciarAgendamento12Horas(() => {
+        executarPatrulhaContinua().catch(() => {});
+    });
+
+    // Inicia o Watchdog de Patrulha Contínua desde o boot (mesmo que os ADMs sejam conectados depois pelo painel)
+    iniciarPatrulhaContinua();
 
     const snipersCadastrados = carregarSnipersCampanhas();
     console.log(`[+] Conectando frota de ${snipersCadastrados.length} Administradores Snipers distribuídos por campanha...`);
-    for (const s of snipersCadastrados) {
-        const idNum = Number(s.id || s.indice);
-        await conectarSniper(idNum);
-    }
+    await Promise.allSettled(
+        snipersCadastrados.map(s => conectarSniper(Number(s.id || s.indice)))
+    );
 
-    if (snipersAtivos.length === 0) {
+    if (snipersAtivos.filter(sniperEstaOperacional).length === 0) {
         console.warn('⚠️ [AVISO] Nenhum ADM com sessão salva pôde ser conectado no momento.');
-        console.log('📌 O Painel Web está 100% ativo. Acesse o navegador para conectar seus ADMs via QR Code ou Código.');
+        console.log('📌 O Painel Web e a Patrulha Contínua estão 100% ativos. Acesse o navegador para conectar seus ADMs via QR Code ou Código.');
         adicionarEventoFeed('SISTEMA', '⚠️ Nenhum ADM conectado. Conecte pelo Painel Web via QR Code ou Código de Pareamento.');
         return;
     }
 
-    console.log(`\n✅ ${snipersAtivos.length} Administradores (ADMs) armados e de olho nos grupos.`);
+    console.log(`\n✅ ${snipersAtivos.filter(sniperEstaOperacional).length} Administradores (ADMs) armados e de olho exclusivamente nos grupos SendFlow.`);
 
     await executarLimpezaInicial();
 
     console.log('\n=================================================================');
-    console.log('🟢 [SENTINELA ATIVO 24/7] VIGIANDO TODAS AS CAMPANHAS ATIVAS DO SENDFLOW!');
-    console.log(`   • Tolerância de Saturação: até ${configAtual.limiteGruposPorCampanha} grupos por campanha.`);
+    console.log('🟢 [SENTINELA ATIVO 24/7] VIGIANDO EXCLUSIVAMENTE AS CAMPANHAS DO SENDFLOW!');
+    console.log(`   • Tolerância de Saturação (Leads Restritos): até ${configAtual.limiteGruposPorCampanha} grupos por campanha.`);
     console.log(`   • Ban Permanente Automático: acima de ${configAtual.limiteBanPermanente} links = Remoção total sem exceção.`);
-    console.log('   • Verificação periódica automática de grupos: a cada 12 horas.');
-    console.log('   • ADMs por campanha e Whitelist 100% protegidos.');
+    console.log('   • Failover Automático Ativo: se um ADM cair ou for banido, os demais assumem sem parar.');
+    console.log('   • Patrulha Contínua ativa a cada 60 segundos + Sincronização SendFlow a cada 12h.');
     console.log('=================================================================\n');
 
     sentinelaRealtimeAtivo = true;
@@ -2412,6 +2615,7 @@ module.exports = {
     registrarCrocodilo,
     removerCrocodilo,
     auditarSaturacaoECrocodilos,
+    executarPatrulhaContinua,
     autoSalvarBackupSessoes,
     DATA_DIR,
     // Aliases para compatibilidade total

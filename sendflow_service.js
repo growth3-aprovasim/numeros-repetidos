@@ -10,6 +10,7 @@ const path = require('path');
 const DATA_DIR = process.env.DATA_DIR || (fs.existsSync(path.join(__dirname, 'data')) ? path.join(__dirname, 'data') : __dirname);
 const ARQUIVO_CAMPANHAS = path.join(DATA_DIR, 'sendflow_campanhas_ativas.json');
 const ARQUIVO_CAMPANHAS_ADMS = path.join(DATA_DIR, 'campanhas_adms.json');
+const ARQUIVO_SNIPERS_CAMPANHAS = path.join(DATA_DIR, 'snipers_campanhas.json');
 
 const SENDFLOW_API_KEY = process.env.SENDFLOW_API_KEY || '';
 const BASE_URL = process.env.SENDFLOW_BASE_URL || 'https://sendflow.pro/sendapi';
@@ -285,19 +286,63 @@ async function sincronizarCampanhasSendflow(forcar = false) {
 
         console.log(`[🎯 SENDFLOW] ${todasReleases.length} campanhas no total | ${ativas.length} campanhas ATIVAS encontradas.`);
 
-        // Preserva os grupos já cadastrados em cada campanha para NÃO bater rate-limit
-        const novasCampanhas = ativas.map(rel => {
+        // Preserva os grupos já cadastrados em cada campanha e sincroniza grupos da API do SendFlow com segurança
+        const novasCampanhas = [];
+        let bateuRateLimitGrupos = false;
+
+        for (const rel of ativas) {
             const antiga = cacheCampanhas.campanhas.find(c => c.id === rel.id);
             const gruposPreservados = (antiga && Array.isArray(antiga.grupos)) ? antiga.grupos : [];
-            return {
+            const gruposIgnorados = (antiga && Array.isArray(antiga.gruposIgnorados)) ? antiga.gruposIgnorados : [];
+            const gruposManuais = gruposPreservados.filter(g => g.origem === 'Manual');
+
+            let gruposFinais = gruposPreservados;
+            const temVinculoAtivo = campanhaEstaVinculadaComAdm({ ...rel, grupos: gruposPreservados });
+
+            // Busca os grupos vinculados no SendFlow apenas para campanhas vinculadas com ADMs ou forçadas
+            if (!bateuRateLimitGrupos && temVinculoAtivo && (forcar || gruposPreservados.length === 0)) {
+                await sleep(1200);
+                const resGrupos = await requestSendflow(`/releases/${rel.id}/groups`);
+                if (resGrupos.statusCode === 200 && Array.isArray(resGrupos.data)) {
+                    const ignoradosSet = new Set(gruposIgnorados);
+                    const gruposApi = resGrupos.data
+                        .map(g => ({
+                            id: g.id || g._id,
+                            name: g.name || '',
+                            gid: g.gid || g.jid || '',
+                            jid: g.jid || g.gid || '',
+                            inviteCode: g.inviteCode || '',
+                            full: Boolean(g.full),
+                            participantsAmount: Number(g.participantsAmount) || 0,
+                            count: Number(g.count) || 0,
+                            origem: 'SendFlow',
+                            admins: Array.isArray(g.admins) ? g.admins.map(a => ({
+                                name: a.name || 'Admin',
+                                number: extrairNumeroLimpo(a.number)
+                            })) : []
+                        }))
+                        .filter(g => !ignoradosSet.has(g.id) && !ignoradosSet.has(g.gid) && !ignoradosSet.has(g.name));
+
+                    // Mescla grupos da API com eventuais grupos adicionados manualmente na aba SendFlow
+                    const gidsApi = new Set(gruposApi.map(x => x.gid || x.jid || x.name).filter(Boolean));
+                    const manuaisExtras = gruposManuais.filter(m => !gidsApi.has(m.gid) && !gidsApi.has(m.name));
+                    gruposFinais = [...gruposApi, ...manuaisExtras];
+                } else if (resGrupos.statusCode === 403 || resGrupos.statusCode === 429) {
+                    bateuRateLimitGrupos = true;
+                    console.warn(`[⚠️ SENDFLOW] Rate-limit ao buscar grupos de "${rel.name}". Preservando grupos em cache.`);
+                }
+            }
+
+            novasCampanhas.push({
                 id: rel.id,
                 name: rel.name,
                 type: rel.type || 'WhatsRelease',
                 archived: false,
-                totalGrupos: gruposPreservados.length,
-                grupos: gruposPreservados
-            };
-        });
+                totalGrupos: gruposFinais.length,
+                grupos: gruposFinais,
+                gruposIgnorados
+            });
+        }
 
         const totalGruposMapeados = novasCampanhas.reduce((acc, c) => acc + (c.grupos ? c.grupos.length : 0), 0);
         const agora = new Date();
@@ -367,7 +412,8 @@ async function sincronizarGruposCampanha(releaseId) {
     }
 
     if (resGrupos.statusCode === 200 && Array.isArray(resGrupos.data)) {
-        camp.grupos = resGrupos.data.map(g => ({
+        const gruposManuais = (camp.grupos || []).filter(g => g.origem === 'Manual');
+        const gruposApi = resGrupos.data.map(g => ({
             id: g.id || g._id,
             name: g.name || '',
             gid: g.gid || g.jid || '',
@@ -376,14 +422,24 @@ async function sincronizarGruposCampanha(releaseId) {
             full: Boolean(g.full),
             participantsAmount: Number(g.participantsAmount) || 0,
             count: Number(g.count) || 0,
+            origem: 'SendFlow',
             admins: Array.isArray(g.admins) ? g.admins.map(a => ({
                 name: a.name || 'Admin',
                 number: extrairNumeroLimpo(a.number)
             })) : []
         }));
+
+        const gidsApi = new Set(gruposApi.map(x => x.gid || x.jid || x.name).filter(Boolean));
+        const manuaisExtras = gruposManuais.filter(m => !gidsApi.has(m.gid) && !gidsApi.has(m.name));
+
+        camp.grupos = [...gruposApi, ...manuaisExtras];
         camp.totalGrupos = camp.grupos.length;
         cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
         salvarCampanhasLocais();
+
+        if (typeof callbackNotificacao === 'function') {
+            try { callbackNotificacao(cacheCampanhas); } catch (e) { }
+        }
 
         return {
             sucesso: true,
@@ -407,6 +463,9 @@ function adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount
     if (!camp) throw new Error('Campanha não encontrada no cache.');
 
     if (!Array.isArray(camp.grupos)) camp.grupos = [];
+    if (Array.isArray(camp.gruposIgnorados)) {
+        camp.gruposIgnorados = camp.gruposIgnorados.filter(x => x !== gid && x !== name);
+    }
 
     let gidLimpo = String(gid || '').trim();
     if (gidLimpo && !gidLimpo.includes('@g.us') && !gidLimpo.includes('http') && /^\d+$/.test(gidLimpo)) {
@@ -416,8 +475,14 @@ function adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount
     const indexExistente = camp.grupos.findIndex(g => (gidLimpo && g.gid === gidLimpo) || (name && g.name === name));
     if (indexExistente !== -1) {
         if (name) camp.grupos[indexExistente].name = name;
-        if (gidLimpo) camp.grupos[indexExistente].gid = gidLimpo;
+        if (gidLimpo) {
+            camp.grupos[indexExistente].gid = gidLimpo;
+            camp.grupos[indexExistente].jid = gidLimpo;
+        }
         salvarCampanhasLocais();
+        if (typeof callbackNotificacao === 'function') {
+            try { callbackNotificacao(cacheCampanhas); } catch (e) { }
+        }
         return {
             sucesso: true,
             mensagem: 'Grupo já estava cadastrado nesta campanha. Dados atualizados!',
@@ -442,6 +507,10 @@ function adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount
     cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
     salvarCampanhasLocais();
 
+    if (typeof callbackNotificacao === 'function') {
+        try { callbackNotificacao(cacheCampanhas); } catch (e) { }
+    }
+
     return {
         sucesso: true,
         mensagem: `Grupo "${novoGrupo.name}" adicionado à campanha com sucesso!`,
@@ -456,16 +525,26 @@ function removerGrupoCampanha(releaseId, idOuGid) {
     const camp = cacheCampanhas.campanhas.find(c => c.id === releaseId);
     if (!camp || !Array.isArray(camp.grupos)) throw new Error('Campanha não encontrada.');
 
-    const antes = camp.grupos.length;
-    camp.grupos = camp.grupos.filter(g => g.id !== idOuGid && g.gid !== idOuGid && g.jid !== idOuGid);
-
-    if (camp.grupos.length === antes) {
+    const removidos = camp.grupos.filter(g => g.id === idOuGid || g.gid === idOuGid || g.jid === idOuGid);
+    if (removidos.length === 0) {
         return { sucesso: false, erro: 'Grupo não encontrado nesta campanha.' };
     }
 
+    if (!Array.isArray(camp.gruposIgnorados)) camp.gruposIgnorados = [];
+    for (const r of removidos) {
+        if (r.id && !camp.gruposIgnorados.includes(r.id)) camp.gruposIgnorados.push(r.id);
+        if (r.gid && !camp.gruposIgnorados.includes(r.gid)) camp.gruposIgnorados.push(r.gid);
+        if (r.name && !camp.gruposIgnorados.includes(r.name)) camp.gruposIgnorados.push(r.name);
+    }
+
+    camp.grupos = camp.grupos.filter(g => g.id !== idOuGid && g.gid !== idOuGid && g.jid !== idOuGid);
     camp.totalGrupos = camp.grupos.length;
     cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
     salvarCampanhasLocais();
+
+    if (typeof callbackNotificacao === 'function') {
+        try { callbackNotificacao(cacheCampanhas); } catch (e) { }
+    }
 
     return {
         sucesso: true,
@@ -534,6 +613,14 @@ function adicionarAdmCampanha(releaseId, { numero, nome }) {
 
     lista.push(novoAdm);
     salvarAdmsCampanhas();
+
+    // Se a campanha ainda não tiver a lista de grupos sincronizada da API do SendFlow, dispara a busca automaticamente
+    const camp = cacheCampanhas.campanhas.find(c => c.id === releaseId);
+    if (camp && (!Array.isArray(camp.grupos) || camp.grupos.length === 0)) {
+        sincronizarGruposCampanha(releaseId).catch(() => {});
+    } else if (typeof callbackNotificacao === 'function') {
+        try { callbackNotificacao(cacheCampanhas); } catch (e) { }
+    }
 
     return {
         sucesso: true,
@@ -609,90 +696,168 @@ function importarAdminsDoSendflow(releaseId) {
 // 🔍 CONSULTAS DE IDENTIFICAÇÃO E IMUNIDADE POR CAMPANHA
 // =====================================================================
 
-// Descobre a qual campanha um grupo pertence (por JID/GID ou por nome do grupo)
-function obterInfoGrupoCampanha(idGrupo, subject) {
+function extrairGidPuro(raw) {
+    if (!raw) return '';
+    return String(raw).split('@')[0].replace(/\D/g, '').trim();
+}
+
+// Verifica se uma campanha do SendFlow possui ADMs ou grupos vinculados pelo usuário na aba Campanhas SendFlow & ADMs
+function campanhaEstaVinculadaComAdm(camp) {
+    if (!camp || camp.archived) return false;
+    const admsDedicados = cacheAdmsCampanhas[camp.id];
+    if (Array.isArray(admsDedicados) && admsDedicados.length > 0) return true;
+    if (Array.isArray(camp.grupos) && camp.grupos.length > 0) return true;
+
+    try {
+        if (fs.existsSync(ARQUIVO_SNIPERS_CAMPANHAS)) {
+            const snipers = JSON.parse(fs.readFileSync(ARQUIVO_SNIPERS_CAMPANHAS, 'utf-8'));
+            if (Array.isArray(snipers) && snipers.some(s => s && s.campaignId === camp.id)) {
+                return true;
+            }
+        }
+    } catch (e) { }
+
+    return false;
+}
+
+// Descobre a qual campanha um grupo pertence EXCLUSIVAMENTE pelas campanhas e grupos vinculados na aba Campanhas SendFlow & ADMs
+function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
     if (!idGrupo && !subject) return null;
 
     const idLimpo = String(idGrupo || '').trim();
+    const gidPuroAlvo = extrairGidPuro(idLimpo);
     const nomeLimpo = String(subject || '').trim();
 
-    // 1. Busca exata por gid/jid no cache de campanhas
-    for (const camp of cacheCampanhas.campanhas) {
-        if (!Array.isArray(camp.grupos)) continue;
-        for (const g of camp.grupos) {
-            if (g.gid && idLimpo && (g.gid === idLimpo || g.gid.includes(idLimpo) || idLimpo.includes(g.gid))) {
-                return {
-                    releaseId: camp.id,
-                    nomeCampanha: camp.name,
-                    idGrupo: g.gid || idLimpo,
-                    nomeGrupo: g.name || nomeLimpo || camp.name,
-                    campanhaObj: camp
-                };
+    // 1. Busca exata por gid/jid nos grupos vinculados às campanhas ativas monitoradas
+    if (idLimpo || gidPuroAlvo) {
+        for (const camp of cacheCampanhas.campanhas) {
+            if (!campanhaEstaVinculadaComAdm(camp) || !Array.isArray(camp.grupos)) continue;
+            if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || (nomeLimpo && camp.gruposIgnorados.includes(nomeLimpo)))) {
+                continue;
             }
-            if (g.jid && idLimpo && (g.jid === idLimpo || g.jid.includes(idLimpo) || idLimpo.includes(g.jid))) {
-                return {
-                    releaseId: camp.id,
-                    nomeCampanha: camp.name,
-                    idGrupo: g.jid || idLimpo,
-                    nomeGrupo: g.name || nomeLimpo || camp.name,
-                    campanhaObj: camp
-                };
+            for (const g of camp.grupos) {
+                const gGid = String(g.gid || '').trim();
+                const gJid = String(g.jid || '').trim();
+                const gGidPuro = extrairGidPuro(gGid || gJid);
+
+                if ((gGid && idLimpo && gGid === idLimpo) ||
+                    (gJid && idLimpo && gJid === idLimpo) ||
+                    (gidPuroAlvo && gGidPuro && gidPuroAlvo.length >= 10 && gidPuroAlvo === gGidPuro)) {
+                    if (participantsAmount > 0 && g.participantsAmount !== participantsAmount) {
+                        g.participantsAmount = participantsAmount;
+                    }
+                    return {
+                        releaseId: camp.id,
+                        nomeCampanha: camp.name,
+                        idGrupo: gGid || gJid || idLimpo,
+                        nomeGrupo: g.name || nomeLimpo || camp.name,
+                        campanhaObj: camp
+                    };
+                }
             }
         }
     }
 
-    // 2. Fallback inteligente por correspondência de nome do grupo com os grupos cadastrados
+    // 2. Busca por nome EXATO entre os grupos explicitamente cadastrados em camp.grupos
     if (nomeLimpo) {
+        const nomeAlvoLower = nomeLimpo.toLowerCase();
         for (const camp of cacheCampanhas.campanhas) {
-            if (!Array.isArray(camp.grupos)) continue;
+            if (!campanhaEstaVinculadaComAdm(camp) || !Array.isArray(camp.grupos)) continue;
+            if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || camp.gruposIgnorados.includes(nomeLimpo))) {
+                continue;
+            }
             for (const g of camp.grupos) {
-                if (g.name && (g.name.toLowerCase() === nomeLimpo.toLowerCase() ||
-                    (nomeLimpo.length >= 6 && g.name.toLowerCase().includes(nomeLimpo.toLowerCase())))) {
+                if (!g.name) continue;
+                const gNomeLower = String(g.name).trim().toLowerCase();
+                if (gNomeLower && gNomeLower === nomeAlvoLower) {
+                    const gGidPuro = extrairGidPuro(g.gid || g.jid);
+                    if (gGidPuro && gidPuroAlvo && gGidPuro !== gidPuroAlvo) {
+                        continue;
+                    }
+                    if (!g.gid && idLimpo && idLimpo.includes('@g.us')) {
+                        g.gid = idLimpo;
+                        g.jid = idLimpo;
+                        if (participantsAmount > 0) g.participantsAmount = participantsAmount;
+                        salvarCampanhasLocais();
+                    }
                     return {
                         releaseId: camp.id,
                         nomeCampanha: camp.name,
-                        idGrupo: idLimpo || g.gid,
+                        idGrupo: idLimpo || g.gid || g.jid,
                         nomeGrupo: g.name,
                         campanhaObj: camp
                     };
                 }
             }
         }
+    }
 
-        // 3. Fallback inteligente para QUALQUER campanha ativa por tag [CÓDIGO] ou palavras-chave
+    // 3. Auto-vinculação ESTRITA apenas para campanhas que possuem ADMs vinculados pelo usuário,
+    // mas cuja lista de grupos ainda não foi retornada pela API do SendFlow (ex: rate-limit 429 ou primeiro boot).
+    // Ignora 100% campanhas sem ADMs vinculados e qualquer grupo de lançamento anterior (com tag [CÓDIGO] diferente).
+    if (nomeLimpo) {
+        const nomeGrupoLower = nomeLimpo.toLowerCase();
+        const tagGrupoMatch = nomeLimpo.match(/\[(.*?)\]/);
+        const tagGrupoLower = tagGrupoMatch && tagGrupoMatch[1] ? tagGrupoMatch[1].trim().toLowerCase() : null;
+
         for (const camp of cacheCampanhas.campanhas) {
+            if (!campanhaEstaVinculadaComAdm(camp)) continue;
+            if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || camp.gruposIgnorados.includes(nomeLimpo))) {
+                continue;
+            }
+            // Se a campanha já sincronizou a lista oficial de grupos via API SendFlow, confia estritamente na lista oficial
+            const jaTemGruposOficiaisApi = Array.isArray(camp.grupos) && camp.grupos.some(g => g.origem === 'SendFlow');
+            if (jaTemGruposOficiaisApi) continue;
+
             const campName = String(camp.name || '').trim();
             const campNameLower = campName.toLowerCase();
-            const nomeGrupoLower = nomeLimpo.toLowerCase();
+            const tagCampMatch = campName.match(/\[(.*?)\]/);
+            const tagCampLower = tagCampMatch && tagCampMatch[1] ? tagCampMatch[1].trim().toLowerCase() : null;
 
-            // 3.1. Se a campanha possui tag entre colchetes ex: [BV-26], [PI-NOV-26], [PES-PPE-26]
-            const tagMatch = campName.match(/\[(.*?)\]/);
-            if (tagMatch && tagMatch[1]) {
-                const tagInterna = tagMatch[1].trim().toLowerCase();
-                // Bate a tag inteira (ex: "pi-nov-26") ou versão sem sufixo de ano (ex: "pi-nov")
-                if (tagInterna.length >= 3 && (nomeGrupoLower.includes(tagInterna) || nomeGrupoLower.includes(tagInterna.replace(/-26$/, '')))) {
-                    return {
-                        releaseId: camp.id,
-                        nomeCampanha: camp.name,
-                        idGrupo: idLimpo,
-                        nomeGrupo: nomeLimpo,
-                        campanhaObj: camp
-                    };
+            // Se o grupo no WhatsApp possui uma tag [CÓDIGO] (ex: [PES-SET-26]), ela OBRIGATORIAMENTE deve ser idêntica à tag da campanha!
+            // Isso impede que grupos de lançamentos passados (ex: [PES-SET-26]) sejam vigiados em campanhas novas (ex: [PES-PPE-26]).
+            if (tagGrupoLower && tagCampLower && tagGrupoLower !== tagCampLower) {
+                continue;
+            }
+            if (tagGrupoLower && !tagCampLower) {
+                continue;
+            }
+
+            let bateuEstrito = false;
+
+            // 3.1. Tag oficial entre colchetes idêntica (ex: [BV-26], [PI-NOV-26], [PES-PPE-26])
+            if (tagCampLower && tagCampLower.length >= 3 && nomeGrupoLower.includes(`[${tagCampLower}]`)) {
+                bateuEstrito = true;
+            }
+
+            // 3.2. Nome base exato da campanha (sem a tag entre colchetes) contido no título do grupo
+            if (!bateuEstrito) {
+                const nomeBaseCampanha = campNameLower.replace(/\[.*?\]/g, '').trim();
+                if (nomeBaseCampanha.length >= 6 && nomeGrupoLower.includes(nomeBaseCampanha)) {
+                    // Se a campanha exige uma tag específica e existe outra campanha homônima no SendFlow com tag diferente,
+                    // exige que o grupo não seja de um lançamento antigo
+                    bateuEstrito = true;
                 }
-                const partesTag = tagInterna.split('-').filter(p => p.length >= 2 && p !== '26');
-                if (partesTag.length > 0 && partesTag.every(p => nomeGrupoLower.includes(p))) {
-                    return {
-                        releaseId: camp.id,
-                        nomeCampanha: camp.name,
-                        idGrupo: idLimpo,
-                        nomeGrupo: nomeLimpo,
-                        campanhaObj: camp
-                    };
+            }
+
+            if (bateuEstrito) {
+                if (!Array.isArray(camp.grupos)) camp.grupos = [];
+                if (idLimpo && idLimpo.includes('@g.us') && !camp.grupos.some(g => g.gid === idLimpo)) {
+                    camp.grupos.push({
+                        id: idLimpo,
+                        name: nomeLimpo,
+                        gid: idLimpo,
+                        jid: idLimpo,
+                        inviteCode: '',
+                        full: false,
+                        participantsAmount: Number(participantsAmount) || 0,
+                        origem: 'SendFlow-WhatsApp'
+                    });
+                    camp.totalGrupos = camp.grupos.length;
+                    cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
+                    salvarCampanhasLocais();
                 }
-            }
 
-            // 3.2. Regras personalizadas para campanhas clássicas e ativas
-            if (/inss/i.test(campNameLower) && /inss/i.test(nomeGrupoLower)) {
                 return {
                     releaseId: camp.id,
                     nomeCampanha: camp.name,
@@ -700,52 +865,6 @@ function obterInfoGrupoCampanha(idGrupo, subject) {
                     nomeGrupo: nomeLimpo,
                     campanhaObj: camp
                 };
-            }
-            if ((campNameLower.includes('black') || campNameLower.includes('vitalícia') || campNameLower.includes('vitalicia')) &&
-                /black|vital[ií]cia/i.test(nomeGrupoLower)) {
-                return {
-                    releaseId: camp.id,
-                    nomeCampanha: camp.name,
-                    idGrupo: idLimpo,
-                    nomeGrupo: nomeLimpo,
-                    campanhaObj: camp
-                };
-            }
-            if (campNameLower.includes('base forte') && /base\s*forte/i.test(nomeGrupoLower)) {
-                return {
-                    releaseId: camp.id,
-                    nomeCampanha: camp.name,
-                    idGrupo: idLimpo,
-                    nomeGrupo: nomeLimpo,
-                    campanhaObj: camp
-                };
-            }
-            if ((campNameLower.includes('tj-sp') || campNameLower.includes('tjsp')) && /tj-sp|tjsp|tribunal/i.test(nomeGrupoLower)) {
-                return {
-                    releaseId: camp.id,
-                    nomeCampanha: camp.name,
-                    idGrupo: idLimpo,
-                    nomeGrupo: nomeLimpo,
-                    campanhaObj: camp
-                };
-            }
-
-            // 3.3. Correspondência por tokens principais (ex: "inss", "tj-sp", "tjsp")
-            const tokens = campNameLower
-                .replace(/[\[\]\(\)\-_]/g, ' ')
-                .split(/\s+/)
-                .filter(t => t.length >= 3 && !['grupo', 'whats', 'release', '2026', 'pos', 'edital', 'campanha', 'mensagens'].includes(t));
-
-            for (const token of tokens) {
-                if (nomeGrupoLower.includes(token)) {
-                    return {
-                        releaseId: camp.id,
-                        nomeCampanha: camp.name,
-                        idGrupo: idLimpo,
-                        nomeGrupo: nomeLimpo,
-                        campanhaObj: camp
-                    };
-                }
             }
         }
     }

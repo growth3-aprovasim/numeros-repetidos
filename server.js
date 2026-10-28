@@ -22,6 +22,7 @@ const {
     desbanir,
     carregarCrocodilos,
     removerCrocodilo,
+    executarPatrulhaContinua,
     autoSalvarBackupSessoes,
     DATA_DIR,
     obterStatusAdms,
@@ -383,7 +384,7 @@ app.delete('/api/blacklist/:numero', desbanirHandler);
 app.post('/api/blacklist/:numero/desbanir', desbanirHandler);
 app.post('/api/blacklist/desbanir', desbanirHandler);
 
-// 🐊 ROTAS: CROCODILOS KELVEN (LEADS COM > 4 GRUPOS)
+// 🔒 ROTAS: LEADS RESTRITOS (EXCEDENTES COM > 4 GRUPOS)
 app.get('/api/crocodilos', (req, res) => {
     try {
         const crocodilos = carregarCrocodilos();
@@ -405,9 +406,9 @@ const removerCrocodiloHandler = (req, res) => {
         }
         const ok = removerCrocodilo(numAlvo);
         if (!ok) {
-            return res.status(404).json({ sucesso: false, erro: 'Número não encontrado na lista de Crocodilos Kelven.' });
+            return res.status(404).json({ sucesso: false, erro: 'Número não encontrado na lista de Leads Restritos.' });
         }
-        res.json({ sucesso: true, mensagem: `Número ${formatarExibicao(numAlvo)} removido da lista de Crocodilos.` });
+        res.json({ sucesso: true, mensagem: `Número ${formatarExibicao(numAlvo)} removido da lista de Leads Restritos.` });
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
     }
@@ -602,6 +603,7 @@ app.post('/api/sendflow/sincronizar', async (req, res) => {
     try {
         console.log('[🔄] Disparo manual de sincronização do SendFlow solicitado pelo Painel Web...');
         const resultado = await sincronizarCampanhasSendflow(true);
+        setTimeout(() => { executarPatrulhaContinua().catch(() => {}); }, 500);
         res.json(resultado);
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
@@ -627,6 +629,7 @@ app.post('/api/sendflow/campanhas/:releaseId/adms', (req, res) => {
             return res.status(400).json({ sucesso: false, erro: 'Número de WhatsApp do ADM é obrigatório.' });
         }
         const resultado = adicionarAdmCampanha(releaseId, { numero, nome });
+        setTimeout(() => { executarPatrulhaContinua().catch(() => {}); }, 500);
         res.json(resultado);
     } catch (err) {
         res.status(400).json({ sucesso: false, erro: err.message });
@@ -663,6 +666,7 @@ app.post('/api/sendflow/campanhas/:releaseId/sincronizar-grupos', async (req, re
     try {
         const { releaseId } = req.params;
         const resultado = await sincronizarGruposCampanha(releaseId);
+        setTimeout(() => { executarPatrulhaContinua().catch(() => {}); }, 500);
         res.json(resultado);
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
@@ -678,6 +682,7 @@ app.post('/api/sendflow/campanhas/:releaseId/grupos', (req, res) => {
             return res.status(400).json({ sucesso: false, erro: 'Informe o ID/Link ou Nome do grupo.' });
         }
         const resultado = adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount });
+        setTimeout(() => { executarPatrulhaContinua().catch(() => {}); }, 500);
         res.json(resultado);
     } catch (err) {
         res.status(400).json({ sucesso: false, erro: err.message });
@@ -692,6 +697,7 @@ app.delete('/api/sendflow/campanhas/:releaseId/grupos/:gid', (req, res) => {
         if (!resultado.sucesso) {
             return res.status(404).json(resultado);
         }
+        setTimeout(() => { executarPatrulhaContinua().catch(() => {}); }, 500);
         res.json(resultado);
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });

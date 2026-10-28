@@ -130,7 +130,7 @@
             </button>
             <button class="nav-tab-btn" id="nav-btn-blacklist" data-view="blacklist">
                 <span class="nav-tab-icon">⛔</span>
-                <span class="nav-tab-label">Blacklist (Banidos)</span>
+                <span class="nav-tab-label">Banidos & Restritos</span>
                 <span class="nav-tab-badge badge-rose" id="nav-badge-blacklist">0</span>
             </button>
             <button class="nav-tab-btn" id="nav-btn-config" data-view="config">
@@ -392,8 +392,8 @@
                         <!-- BARRA DE CONTROLE & FILTRO DE CAMPANHAS -->
                         <div class="espioes-control-bar">
                             <div class="control-bar-info">
-                                <span class="control-bar-label">Organização por Campanha SendFlow:</span>
-                                <span class="control-bar-help" id="adms-summary-text">Os banimentos são realizados exclusivamente pelos ADMs designados para a respectiva campanha.</span>
+                                <span class="control-bar-label">Organização por Campanha SendFlow (Com Failover Automático):</span>
+                                <span class="control-bar-help" id="adms-summary-text">Os banimentos priorizam os ADMs da campanha e contam com failover automático entre ADMs caso algum chip caia ou seja banido.</span>
                             </div>
                             <div class="control-bar-action">
                                 <div class="search-wrap" style="min-width: 260px;">
@@ -414,7 +414,7 @@
                 </div>
 
                 <!-- ============================================================= -->
-                <!-- VISTA 3: BLACKLIST (BANIDOS PERMANENTES) -->
+                <!-- VISTA 3: BANIDOS & RESTRITOS -->
                 <!-- ============================================================= -->
                 <div class="module-view" id="view-blacklist">
                     <section class="glass-card" id="card-blacklist-manager">
@@ -454,35 +454,35 @@
                         </div>
                     </section>
 
-                    <!-- CARD: CROCODILOS KELVEN (LEADS COM > 4 GRUPOS) -->
+                    <!-- CARD: LEADS RESTRITOS (EXCEDENTES COM > 4 GRUPOS) -->
                     <section class="glass-card" id="card-crocodilos-manager" style="margin-top: 24px;">
                         <div class="card-header list-header">
                             <div class="card-title-group">
                                 <h2 class="card-title">
-                                    🐊 Crocodilos Kelven // Leads com > 4 Grupos
+                                    🔒 Leads Restritos // Excedentes (> 4 Grupos)
                                     <span class="badge-count" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);" id="badge-total-crocodilos">0</span>
                                 </h2>
-                                <p class="card-subtitle">Leads que violaram o limite de grupos. Foram mantidos <strong>APENAS no 1º grupo que acessaram</strong> e expulsos dos grupos excedentes.</p>
+                                <p class="card-subtitle">Leads restritos por excesso de grupos. Foram mantidos <strong>APENAS no 1º grupo que acessaram</strong> e bloqueados de entrar nos demais.</p>
                             </div>
                         </div>
 
-                        <!-- BARRA DE PESQUISA CROCODILOS -->
+                        <!-- BARRA DE PESQUISA LEADS RESTRITOS -->
                         <div class="search-bar-wrap">
                             <span class="search-icon">🔍</span>
                             <input 
                                 type="text" 
                                 id="input-search-crocodilos" 
                                 class="search-input" 
-                                placeholder="Buscar crocodilo por número ou campanha..."
+                                placeholder="Buscar lead restrito por número ou campanha..."
                             >
                             <button class="search-clear-btn" id="btn-clear-search-crocodilos" style="display: none;">✕</button>
                         </div>
 
-                        <!-- LISTA SCROLLÁVEL DE CROCODILOS -->
+                        <!-- LISTA SCROLLÁVEL DE LEADS RESTRITOS -->
                         <div class="blacklist-scroll-area" id="crocodilos-items-container">
                             <div class="loading-state" id="loading-crocodilos">
                                 <span class="spinner"></span>
-                                <span>Carregando lista de Crocodilos Kelven...</span>
+                                <span>Carregando lista de Leads Restritos...</span>
                             </div>
                         </div>
                     </section>

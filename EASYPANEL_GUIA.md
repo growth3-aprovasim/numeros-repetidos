@@ -78,7 +78,7 @@ Na aba **Storage** do seu App no Easypanel, adicione:
 **O que fica salvo permanentemente no `/app/data`:**
 - ✅ **Todos os logins de todos os ADMs Snipers** de todas as campanhas (`auth_sniper_*`).
 - ✅ **Backup automático contínuo (`aegis_sessoes_snipers.zip`)**: criado e mantido pelo próprio sistema a cada conexão. Se o container reiniciar, ele restaura tudo sozinho.
-- ✅ **Blacklist Permanente** e **Crocodilos Kelven** (`blacklist_aegis.json`, `crocodilos_kelven.json`).
+- ✅ **Blacklist Permanente** e **Leads Restritos** (`blacklist_aegis.json`, `crocodilos_kelven.json`).
 - ✅ **Whitelist de Administradores** (`whitelist_aegis.json`).
 - ✅ **Configurações e Limites** (`config_aegis.json`).
 - ✅ **Mapeamento de ADMs por Campanha** (`snipers_campanhas.json`).

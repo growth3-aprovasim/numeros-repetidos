@@ -568,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let statusPillTexto = '⚪ DESCONECTADO';
         if (ehConectado) statusPillTexto = '🟢 CONECTADO';
+        else if (esp.status === 'banido') statusPillTexto = '🚫 CHIP BANIDO';
         else if (esp.status === 'qr_pronto') statusPillTexto = '🟡 QR PRONTO';
         else if (esp.status === 'codigo_pronto') statusPillTexto = '🟡 CÓDIGO GERADO';
         else if (esp.status === 'solicitando_codigo' || esp.status === 'gerando_qr') statusPillTexto = '⏳ AGUARDANDO...';
@@ -577,6 +578,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="espiao-phone-display">
                     <span class="espiao-phone-icon">📱</span>
                     <span class="espiao-phone-text">${escapeHtml(esp.numeroFormatado || '+' + esp.numero)}</span>
+                </div>
+            `
+            : esp.status === 'banido'
+            ? `
+                <div class="espiao-phone-display" style="color: #f87171;">
+                    <span class="espiao-phone-icon">⚠️</span>
+                    <span class="espiao-phone-text">Chip banido (Failover ativo — conecte outro)</span>
                 </div>
             `
             : `
@@ -1257,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 🐊 SUBMÓDULO: CROCODILOS KELVEN (LEADS COM > 4 GRUPOS)
+    // 🔒 SUBMÓDULO: LEADS RESTRITOS // EXCEDENTES (> 4 GRUPOS)
     // Mantém apenas o 1º grupo acessado e remove dos demais
     // =================================================================
     const crocodilosItemsContainer = document.getElementById('crocodilos-items-container');
@@ -1278,7 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (e) {
-            console.error('[!] Erro ao carregar Crocodilos Kelven:', e);
+            console.error('[!] Erro ao carregar Leads Restritos:', e);
         }
     }
 
@@ -1288,8 +1296,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!lista || lista.length === 0) {
             crocodilosItemsContainer.innerHTML = `
                 <div class="empty-state">
-                    <span class="empty-icon">🐊</span>
-                    <p class="empty-title">Nenhum Crocodilo Kelven detectado</p>
+                    <span class="empty-icon">🔒</span>
+                    <p class="empty-title">Nenhum Lead Restrito detectado</p>
                     <p class="empty-subtitle">Leads que ultrapassarem o limite de 4 grupos na mesma campanha serão mantidos apenas no 1º grupo e listados aqui.</p>
                 </div>
             `;
@@ -1302,19 +1310,20 @@ document.addEventListener('DOMContentLoaded', () => {
             row.className = 'blacklist-item';
             row.id = `crocodilo-row-${item.numero}`;
 
-            const dataFormatada = item.dataDeteccao
-                ? new Date(item.dataDeteccao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            const dataRef = item.dataIdentificacao || item.dataDeteccao;
+            const dataFormatada = dataRef
+                ? new Date(dataRef).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'Data não registrada';
 
             const campInfo = item.nomeCampanha || item.idCampanha || 'Campanha Ativa';
             const gruposRemovidosCount = Array.isArray(item.gruposRemovidos) ? item.gruposRemovidos.length : 0;
-            const primeiroGrupoInfo = item.nomePrimeiroGrupo || item.primeiroGrupoId || 'Grupo Primário #1';
+            const primeiroGrupoInfo = item.grupoMantido?.nome || item.nomePrimeiroGrupo || item.grupoMantido?.id || item.primeiroGrupoId || 'Grupo Primário #1';
 
             row.innerHTML = `
                 <div class="blacklist-item-info">
                     <div class="blacklist-num-row">
                         <span class="blacklist-num">${escapeHtml(item.numeroFormatado || '+' + item.numero)}</span>
-                        <span class="badge-role" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">🐊 CROCODILO KELVEN</span>
+                        <span class="badge-role" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">🔒 RESTRITO (1º GRUPO)</span>
                         <span class="badge-tag-campanha" style="margin-left: 6px;">${escapeHtml(campInfo)}</span>
                     </div>
                     <span class="blacklist-reason" style="color: #38bdf8;">
@@ -1326,8 +1335,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="blacklist-date">Detectado em: ${escapeHtml(dataFormatada)}</span>
                 </div>
                 <div class="admin-item-actions">
-                    <button class="btn btn-sm btn-outline btn-remover-crocodilo" data-numero="${escapeHtml(item.numero)}" title="Liberar este lead da lista de Crocodilos">
-                        ✨ Liberar Lead
+                    <button class="btn btn-sm btn-outline btn-remover-crocodilo" data-numero="${escapeHtml(item.numero)}" title="Liberar este lead da lista de Restritos">
+                        ✨ Liberar Restrição
                     </button>
                 </div>
             `;
@@ -1339,14 +1348,14 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', async (e) => {
                 const num = e.currentTarget.dataset.numero;
                 if (!num) return;
-                const confirmar = confirm(`Deseja liberar o lead ${num} da lista de Crocodilos Kelven?`);
+                const confirmar = confirm(`Deseja remover a restrição do lead ${num} da lista de Leads Restritos?`);
                 if (!confirmar) return;
 
                 try {
                     const res = await fetch(`/api/crocodilos/${encodeURIComponent(num)}`, { method: 'DELETE' });
                     const data = await res.json();
                     if (data.sucesso) {
-                        showToast(data.mensagem || `Lead ${num} liberado com sucesso!`);
+                        showToast(data.mensagem || `Restrição do lead ${num} removida com sucesso!`);
                         await carregarCrocodilos();
                     } else {
                         showToast(data.erro || 'Erro ao liberar lead.', 'error');
@@ -1374,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const filtrados = listaCrocodilosCache.filter(item => {
                 const num = String(item.numero || '');
                 const camp = String(item.nomeCampanha || item.idCampanha || '').toLowerCase();
-                const grupo = String(item.nomePrimeiroGrupo || '').toLowerCase();
+                const grupo = String(item.grupoMantido?.nome || item.nomePrimeiroGrupo || '').toLowerCase();
                 return (termoLimpo && num.includes(termoLimpo)) || camp.includes(termo) || grupo.includes(termo);
             });
 
