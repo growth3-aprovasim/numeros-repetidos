@@ -805,10 +805,12 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
             for (const g of camp.grupos) {
                 const gGid = String(g.gid || '').trim();
                 const gJid = String(g.jid || '').trim();
-                const gGidPuro = extrairGidPuro(gGid || gJid);
+                const gId = String(g.id || '').trim();
+                const gGidPuro = extrairGidPuro(gGid || gJid || gId);
 
                 if ((gGid && idLimpo && gGid === idLimpo) ||
                     (gJid && idLimpo && gJid === idLimpo) ||
+                    (gId && idLimpo && gId === idLimpo) ||
                     (gidPuroAlvo && gGidPuro && gidPuroAlvo.length >= 10 && gidPuroAlvo === gGidPuro)) {
                     if (participantsAmount > 0 && g.participantsAmount !== participantsAmount) {
                         g.participantsAmount = participantsAmount;
@@ -860,101 +862,7 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
         }
     }
 
-    // 3. Auto-vinculação ESTRITA apenas para campanhas que possuem ADMs vinculados pelo usuário,
-    // mas cuja lista de grupos ainda não foi retornada pela API do SendFlow (ex: rate-limit 429 ou primeiro boot).
-    // Ignora 100% campanhas sem ADMs vinculados e qualquer grupo de lançamento anterior (com tag [CÓDIGO] diferente).
-    if (nomeLimpo) {
-        const nomeGrupoLower = nomeLimpo.toLowerCase();
-        const tagGrupoMatch = nomeLimpo.match(/\[(.*?)\]/);
-        const tagGrupoLower = tagGrupoMatch && tagGrupoMatch[1] ? tagGrupoMatch[1].trim().toLowerCase() : null;
-
-        for (const camp of cacheCampanhas.campanhas) {
-            if (!campanhaEstaVinculadaComAdm(camp)) continue;
-            if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || camp.gruposIgnorados.includes(nomeLimpo))) {
-                continue;
-            }
-
-            const campName = String(camp.name || '').trim();
-            const campNameLower = campName.toLowerCase();
-            const tagCampMatch = campName.match(/\[(.*?)\]/);
-            const tagCampLower = tagCampMatch && tagCampMatch[1] ? tagCampMatch[1].trim().toLowerCase() : null;
-
-            // Se o grupo no WhatsApp possui uma tag [CÓDIGO] (ex: [PES-SET-26]), ela OBRIGATORIAMENTE deve ser idêntica à tag da campanha!
-            // Isso impede que grupos de lançamentos passados (ex: [PES-SET-26]) sejam vigiados em campanhas novas (ex: [PES-PPE-26]).
-            if (tagGrupoLower && tagCampLower && tagGrupoLower !== tagCampLower) {
-                continue;
-            }
-            if (tagGrupoLower && !tagCampLower) {
-                continue;
-            }
-
-            let bateuEstrito = false;
-
-            // 3.1. Tag oficial entre colchetes idêntica (ex: [BV-26], [PI-NOV-26], [PES-PPE-26])
-            if (tagCampLower && tagCampLower.length >= 3 && nomeGrupoLower.includes(`[${tagCampLower}]`)) {
-                bateuEstrito = true;
-            }
-
-            // 3.2. Prefixo/Sufixo configurado no SendFlow ou nome base exato da campanha (sem a tag entre colchetes e ignorando acentos)
-            if (!bateuEstrito) {
-                const removerAcentos = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-                const nomeGrupoSemAcento = removerAcentos(nomeGrupoLower);
-                const nomeBaseCampanha = removerAcentos(campNameLower.replace(/\[.*?\]/g, '').trim());
-                const nomeBaseSemAno = nomeBaseCampanha.replace(/\b20\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
-                const prefixoSemAcento = removerAcentos(String(camp.groupNamePrefix || '').replace(/\[.*?\]/g, '').trim());
-                const sufixoSemAcento = removerAcentos(String(camp.groupNameSuffix || '').replace(/\[.*?\]/g, '').trim());
-
-                if (prefixoSemAcento.length >= 5 && nomeGrupoSemAcento.includes(prefixoSemAcento)) {
-                    bateuEstrito = true;
-                } else if (sufixoSemAcento.length >= 5 && nomeGrupoSemAcento.includes(sufixoSemAcento)) {
-                    bateuEstrito = true;
-                } else if (nomeBaseCampanha.length >= 6 && nomeGrupoSemAcento.includes(nomeBaseCampanha)) {
-                    bateuEstrito = true;
-                } else if (nomeBaseSemAno.length >= 6 && nomeGrupoSemAcento.includes(nomeBaseSemAno)) {
-                    bateuEstrito = true;
-                } else if (nomeBaseCampanha.includes('black vitalicia') && /desconto\s*black|black\s*vital/i.test(nomeGrupoSemAcento)) {
-                    bateuEstrito = true;
-                }
-            }
-
-            if (bateuEstrito) {
-                if (!Array.isArray(camp.grupos)) camp.grupos = [];
-
-                // Verifica se já existe um grupo correspondente nesta campanha para NUNCA duplicar
-                const jaExiste = camp.grupos.find(g => {
-                    if (idLimpo && g.gid && g.gid === idLimpo) return true;
-                    if (nomesDeGrupoSaoIguais(g.name, nomeLimpo)) return true;
-                    return false;
-                });
-
-                if (jaExiste) {
-                    if (idLimpo && idLimpo.includes('@g.us') && (!jaExiste.gid || !jaExiste.gid.includes('@g.us'))) {
-                        jaExiste.gid = idLimpo;
-                        jaExiste.jid = idLimpo;
-                        salvarCampanhasLocais();
-                    }
-                    return {
-                        releaseId: camp.id,
-                        nomeCampanha: camp.name,
-                        idGrupo: idLimpo || jaExiste.gid,
-                        nomeGrupo: jaExiste.name || nomeLimpo,
-                        campanhaObj: camp
-                    };
-                }
-
-                // Identifica o grupo como pertencente à campanha para catraca/vigilância,
-                // sem inflar artificialmente a lista camp.grupos (que é gerida estritamente pela API do SendFlow)
-                return {
-                    releaseId: camp.id,
-                    nomeCampanha: camp.name,
-                    idGrupo: idLimpo,
-                    nomeGrupo: nomeLimpo,
-                    campanhaObj: camp
-                };
-            }
-        }
-    }
-
+    // Grupos que não estão cadastrados no SendFlow não são monitorados
     return null;
 }
 
