@@ -639,7 +639,7 @@ const contadoresConflito440 = new Map(); // indice -> { count, lastTs }
 
 function agendarReconexao(indice, ms = 3000) {
     cancelarReconexao(indice);
-    const delayStagger = Math.max(ms, 3000) + ((indice % 5) * 1200);
+    const delayStagger = Math.max(ms, 3000) + ((Math.max(1, indice) - 1) * 2500) + Math.floor(Math.random() * 2000);
     const t = setTimeout(() => {
         timersReconexao.delete(indice);
         conectarSniper(indice).catch(() => {});
@@ -1290,6 +1290,8 @@ const INTERVALO_MINIMO_MAPEAMENTO_MS = 15 * 60 * 1000; // 15 minutos de cache m�
 // Fila serializada anti-rate-limit para mapeamento de grupos
 let filaMapeamento = [];
 let processandoFilaMapeamento = false;
+let ultimoMapeamentoGlobalTs = 0;
+const INTERVALO_MINIMO_GLOBAL_MAPEAMENTO_MS = 20_000; // 20s de respiro global entre consultas de grupos no WhatsApp
 
 async function enfileirarMapeamentoSniper(sniperObj, forcar = false) {
     if (!sniperObj || !sniperEstaOperacional(sniperObj)) return;
@@ -1322,9 +1324,14 @@ async function processarFilaMapeamento() {
         while (filaMapeamento.length > 0) {
             const item = filaMapeamento.shift();
             if (item && item.sniperObj && sniperEstaOperacional(item.sniperObj)) {
+                const tempoDesdeUltimo = Date.now() - ultimoMapeamentoGlobalTs;
+                if (tempoDesdeUltimo < INTERVALO_MINIMO_GLOBAL_MAPEAMENTO_MS) {
+                    await sleep(INTERVALO_MINIMO_GLOBAL_MAPEAMENTO_MS - tempoDesdeUltimo);
+                }
                 await executarMapeamentoDiretoDoSniper(item.sniperObj, item.forcar);
+                ultimoMapeamentoGlobalTs = Date.now();
                 if (filaMapeamento.length > 0) {
-                    await sleep(2500); // Pausa anti-rate-limit entre ADMs
+                    await sleep(15000); // 15s de respiro seguro entre diferentes ADMs
                 }
             }
         }
@@ -1748,10 +1755,11 @@ async function conectarSniper(indice) {
                 auth: state,
                 printQRInTerminal: false,
                 logger: pino({ level: 'silent' }),
-                browser: Browsers.ubuntu('Chrome'),
-                markOnlineOnConnect: true,
-                generateHighQualityLinkPreview: true,
+                browser: ['OperationAegis', 'Chrome', `122.0.${indice}.1`],
+                markOnlineOnConnect: false,
+                generateHighQualityLinkPreview: false,
                 syncFullHistory: false,
+                keepAliveIntervalMs: 30_000,
                 defaultQueryTimeoutMs: 60_000,
                 connectTimeoutMs: 60_000,
                 getMessage: async () => ({ conversation: '' })
@@ -1816,7 +1824,7 @@ async function conectarSniper(indice) {
 
                         sentinelaRealtimeAtivo = true;
                         vincularListenersRealtime(sniperObj);
-                        mapearGruposDoSniper(sniperObj).catch(() => {});
+                        // Conexão em tempo real ativa; mapeamento massivo delegado à Patrulha Contínua para evitar queda simultânea
                         setTimeout(autoSalvarBackupSessoes, 2000);
 
                         finalizarPromise(sniperObj);
@@ -1972,10 +1980,11 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
         auth: state,
         printQRInTerminal: false,
         logger: pino({ level: 'silent' }),
-        browser: Browsers.ubuntu('Chrome'),
-        markOnlineOnConnect: true,
-        generateHighQualityLinkPreview: true,
+        browser: ['OperationAegis', 'Chrome', `122.0.${indice}.1`],
+        markOnlineOnConnect: false,
+        generateHighQualityLinkPreview: false,
         syncFullHistory: false,
+        keepAliveIntervalMs: 30_000,
         defaultQueryTimeoutMs: 60_000,
         connectTimeoutMs: 60_000,
         getMessage: async () => ({ conversation: '' })
@@ -2049,7 +2058,7 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
 
             sentinelaRealtimeAtivo = true;
             vincularListenersRealtime(sniperObj);
-            mapearGruposDoSniper(sniperObj).catch(() => {});
+            // Conexão em tempo real ativa; mapeamento massivo delegado à Patrulha Contínua para evitar queda simultânea
             setTimeout(autoSalvarBackupSessoes, 2000);
         }
 
@@ -3032,9 +3041,10 @@ async function iniciarOperacaoAegisCompleta() {
 
     const snipersCadastrados = carregarSnipersCampanhas();
     console.log(`[+] Conectando frota de ${snipersCadastrados.length} Administradores Snipers distribuídos por campanha...`);
-    await Promise.allSettled(
-        snipersCadastrados.map(s => conectarSniper(Number(s.id || s.indice)))
-    );
+    for (const s of snipersCadastrados) {
+        conectarSniper(Number(s.id || s.indice)).catch(() => {});
+        await sleep(1500); // 1.5s de espaçamento seguro entre a inicialização de cada ADM
+    }
 
     if (snipersAtivos.filter(sniperEstaOperacional).length === 0) {
         console.warn('⚠️ [AVISO] Nenhum ADM com sessão salva pôde ser conectado no momento.');
