@@ -788,22 +788,43 @@ app.get('/api/backup/sessoes', (req, res) => {
         const zip = new AdmZip();
         let encontrou = false;
 
-        // Escaneia pastas auth_sniper_* e auth_spotter_*
-        const arquivos = fs.readdirSync(__dirname);
-        for (const item of arquivos) {
-            if ((item.startsWith('auth_sniper_') || item.startsWith('auth_spotter_')) && fs.statSync(path.join(__dirname, item)).isDirectory()) {
-                zip.addLocalFolder(path.join(__dirname, item), item);
+        // Escaneia pastas auth_sniper_* e auth_spotter_* em DATA_DIR e __dirname
+        const dirs = Array.from(new Set([DATA_DIR, __dirname]));
+        const pastasAdicionadas = new Set();
+        for (const dir of dirs) {
+            if (!dir || !fs.existsSync(dir)) continue;
+            const arquivos = fs.readdirSync(dir);
+            for (const item of arquivos) {
+                if ((item.startsWith('auth_sniper_') || item.startsWith('auth_spotter_')) && !pastasAdicionadas.has(item)) {
+                    const fullPath = path.join(dir, item);
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        zip.addLocalFolder(fullPath, item);
+                        pastasAdicionadas.add(item);
+                        encontrou = true;
+                    }
+                }
+            }
+        }
+
+        const arquivosJson = [
+            ARQUIVO_WHITELIST,
+            ARQUIVO_METADATA,
+            ARQUIVO_BLACKLIST,
+            ARQUIVO_CONFIG,
+            ARQUIVO_CROCODILOS,
+            path.join(DATA_DIR, 'snipers_campanhas.json'),
+            path.join(DATA_DIR, 'campanhas_adms.json'),
+            path.join(DATA_DIR, 'sendflow_campanhas_ativas.json')
+        ];
+        for (const arq of arquivosJson) {
+            if (arq && fs.existsSync(arq)) {
+                zip.addLocalFile(arq);
                 encontrou = true;
             }
         }
 
-        if (fs.existsSync(ARQUIVO_WHITELIST)) zip.addLocalFile(ARQUIVO_WHITELIST);
-        if (fs.existsSync(ARQUIVO_METADATA)) zip.addLocalFile(ARQUIVO_METADATA);
-        if (fs.existsSync(ARQUIVO_BLACKLIST)) zip.addLocalFile(ARQUIVO_BLACKLIST);
-        if (fs.existsSync(ARQUIVO_CONFIG)) zip.addLocalFile(ARQUIVO_CONFIG);
-
         if (!encontrou) {
-            return res.status(404).json({ sucesso: false, erro: 'Nenhuma pasta de sessão auth_* encontrada.' });
+            return res.status(404).json({ sucesso: false, erro: 'Nenhuma pasta de sessão auth_* ou arquivo de configuração encontrado.' });
         }
 
         const buffer = zip.toBuffer();
@@ -823,11 +844,15 @@ app.post('/api/restore/sessoes', express.raw({ type: 'application/zip', limit: '
         }
 
         const zip = new AdmZip(req.body);
-        zip.extractAllTo(__dirname, true);
+        zip.extractAllTo(DATA_DIR, true);
+        if (DATA_DIR !== __dirname) {
+            zip.extractAllTo(__dirname, true);
+        }
 
         recarregarWhitelist();
         carregarBlacklist();
         carregarConfig();
+        carregarCrocodilos();
 
         setTimeout(() => {
             console.log('[🚀] Conectando Espiões após restauração das credenciais...');
@@ -840,17 +865,6 @@ app.post('/api/restore/sessoes', express.raw({ type: 'application/zip', limit: '
         });
     } catch (err) {
         res.status(500).json({ sucesso: false, erro: err.message });
-    }
-});
-
-// Forçar conexão de todos os espiões manualmente pelo painel
-app.post('/api/snipers/conectar', (req, res) => {
-    try {
-        console.log('[🚀] Disparo manual de conexão dos Espiões solicitado pelo Painel Web...');
-        iniciarOperacaoAegisCompleta().catch(e => console.error('[!] Erro ao conectar Espiões:', e));
-        res.json({ sucesso: true, mensagem: 'Comando de conexão enviado aos Espiões.' });
-    } catch (e) {
-        res.status(500).json({ sucesso: false, erro: e.message });
     }
 });
 

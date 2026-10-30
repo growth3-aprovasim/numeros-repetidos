@@ -336,6 +336,8 @@ async function sincronizarCampanhasSendflow(forcar = false) {
             novasCampanhas.push({
                 id: rel.id,
                 name: rel.name,
+                groupNamePrefix: rel.groupNamePrefix || antiga?.groupNamePrefix || '',
+                groupNameSuffix: rel.groupNameSuffix || antiga?.groupNameSuffix || '',
                 type: rel.type || 'WhatsRelease',
                 archived: false,
                 totalGrupos: gruposFinais.length,
@@ -805,9 +807,6 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
             if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || camp.gruposIgnorados.includes(nomeLimpo))) {
                 continue;
             }
-            // Se a campanha já sincronizou a lista oficial de grupos via API SendFlow, confia estritamente na lista oficial
-            const jaTemGruposOficiaisApi = Array.isArray(camp.grupos) && camp.grupos.some(g => g.origem === 'SendFlow');
-            if (jaTemGruposOficiaisApi) continue;
 
             const campName = String(camp.name || '').trim();
             const campNameLower = campName.toLowerCase();
@@ -830,12 +829,24 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
                 bateuEstrito = true;
             }
 
-            // 3.2. Nome base exato da campanha (sem a tag entre colchetes) contido no título do grupo
+            // 3.2. Prefixo/Sufixo configurado no SendFlow ou nome base exato da campanha (sem a tag entre colchetes e ignorando acentos)
             if (!bateuEstrito) {
-                const nomeBaseCampanha = campNameLower.replace(/\[.*?\]/g, '').trim();
-                if (nomeBaseCampanha.length >= 6 && nomeGrupoLower.includes(nomeBaseCampanha)) {
-                    // Se a campanha exige uma tag específica e existe outra campanha homônima no SendFlow com tag diferente,
-                    // exige que o grupo não seja de um lançamento antigo
+                const removerAcentos = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                const nomeGrupoSemAcento = removerAcentos(nomeGrupoLower);
+                const nomeBaseCampanha = removerAcentos(campNameLower.replace(/\[.*?\]/g, '').trim());
+                const nomeBaseSemAno = nomeBaseCampanha.replace(/\b20\d{2}\b/g, '').replace(/\s+/g, ' ').trim();
+                const prefixoSemAcento = removerAcentos(String(camp.groupNamePrefix || '').replace(/\[.*?\]/g, '').trim());
+                const sufixoSemAcento = removerAcentos(String(camp.groupNameSuffix || '').replace(/\[.*?\]/g, '').trim());
+
+                if (prefixoSemAcento.length >= 5 && nomeGrupoSemAcento.includes(prefixoSemAcento)) {
+                    bateuEstrito = true;
+                } else if (sufixoSemAcento.length >= 5 && nomeGrupoSemAcento.includes(sufixoSemAcento)) {
+                    bateuEstrito = true;
+                } else if (nomeBaseCampanha.length >= 6 && nomeGrupoSemAcento.includes(nomeBaseCampanha)) {
+                    bateuEstrito = true;
+                } else if (nomeBaseSemAno.length >= 6 && nomeGrupoSemAcento.includes(nomeBaseSemAno)) {
+                    bateuEstrito = true;
+                } else if (nomeBaseCampanha.includes('black vitalicia') && /desconto\s*black|black\s*vital/i.test(nomeGrupoSemAcento)) {
                     bateuEstrito = true;
                 }
             }
