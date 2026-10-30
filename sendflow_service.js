@@ -170,19 +170,83 @@ function salvarAdmsCampanhas() {
     }
 }
 
+// =====================================================================
+// 🧹 NORMALIZAÇÃO E DEDUPLICAÇÃO INTELIGENTE DE GRUPOS
+// =====================================================================
+function normalizarNomeParaComparacao(nome) {
+    if (!nome) return '';
+    let s = String(nome).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    s = s.replace(/\[.*?\]/g, ''); // remove [BV-26], [TAGS]
+    s = s.replace(/#\s*0*(\d+)/g, (m, p) => '#' + p); // normaliza #01 -> #1
+    s = s.replace(/[^\w\s#]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    return s;
+}
+
+function nomesDeGrupoSaoIguais(a, b) {
+    if (!a || !b) return false;
+    const nA = normalizarNomeParaComparacao(a);
+    const nB = normalizarNomeParaComparacao(b);
+    return Boolean(nA && nB && nA === nB);
+}
+
+function deduplicarGruposDaCampanha(grupos) {
+    if (!Array.isArray(grupos) || grupos.length <= 1) return grupos || [];
+    const lista = [];
+
+    for (const g of grupos) {
+        const chaveNome = normalizarNomeParaComparacao(g.name);
+        const chaveGid = g.gid && g.gid.includes('@g.us') ? g.gid : null;
+
+        const existente = lista.find(item => {
+            if (chaveGid && item.gid && item.gid === chaveGid) return true;
+            if (chaveNome && normalizarNomeParaComparacao(item.name) === chaveNome) return true;
+            return false;
+        });
+
+        if (existente) {
+            // Unifica dados preservando gid de WhatsApp e metadados de API
+            if (!existente.gid && g.gid) existente.gid = g.gid;
+            if (!existente.jid && g.jid) existente.jid = g.jid;
+            if (!existente.inviteCode && g.inviteCode) existente.inviteCode = g.inviteCode;
+            if (g.origem === 'SendFlow') existente.origem = 'SendFlow';
+            if ((g.participantsAmount || 0) > (existente.participantsAmount || 0)) {
+                existente.participantsAmount = g.participantsAmount;
+            }
+        } else {
+            lista.push({ ...g });
+        }
+    }
+    return lista;
+}
+
 function carregarCampanhasLocais() {
     carregarAdmsCampanhas();
     try {
         if (fs.existsSync(ARQUIVO_CAMPANHAS)) {
             const raw = JSON.parse(fs.readFileSync(ARQUIVO_CAMPANHAS, 'utf-8'));
             if (raw && Array.isArray(raw.campanhas)) {
+                let teveDeduplicacao = false;
+                const campanhasLimpass = raw.campanhas.map(c => {
+                    const antes = Array.isArray(c.grupos) ? c.grupos.length : 0;
+                    const gruposLimpos = deduplicarGruposDaCampanha(c.grupos);
+                    if (gruposLimpos.length !== antes) teveDeduplicacao = true;
+                    return {
+                        ...c,
+                        grupos: gruposLimpos,
+                        totalGrupos: gruposLimpos.length
+                    };
+                });
                 cacheCampanhas = {
                     ultimaAtualizacao: raw.ultimaAtualizacao || new Date().toISOString(),
                     proximaAtualizacaoPrevista: raw.proximaAtualizacaoPrevista || new Date(Date.now() + INTERVALO_12_HORAS_MS).toISOString(),
-                    totalCampanhasAtivas: raw.campanhas.length,
-                    totalGrupos: raw.campanhas.reduce((acc, c) => acc + (c.grupos ? c.grupos.length : (c.totalGrupos || 0)), 0),
-                    campanhas: raw.campanhas
+                    totalCampanhasAtivas: campanhasLimpass.length,
+                    totalGrupos: campanhasLimpass.reduce((acc, c) => acc + (c.grupos ? c.grupos.length : (c.totalGrupos || 0)), 0),
+                    campanhas: campanhasLimpass
                 };
+                if (teveDeduplicacao) {
+                    salvarCampanhasLocais();
+                    console.log(`[🧹 SendFlow Cache] Grupos duplicados foram higienizados e unificados automaticamente.`);
+                }
                 console.log(`[💾 SendFlow Cache] ${cacheCampanhas.totalCampanhasAtivas} campanhas ativas carregadas do disco (${cacheCampanhas.totalGrupos} grupos).`);
                 return cacheCampanhas;
             }
@@ -326,13 +390,14 @@ async function sincronizarCampanhasSendflow(forcar = false) {
                     // Mescla grupos da API com eventuais grupos adicionados manualmente na aba SendFlow
                     const gidsApi = new Set(gruposApi.map(x => x.gid || x.jid || x.name).filter(Boolean));
                     const manuaisExtras = gruposManuais.filter(m => !gidsApi.has(m.gid) && !gidsApi.has(m.name));
-                    gruposFinais = [...gruposApi, ...manuaisExtras];
+                    gruposFinais = deduplicarGruposDaCampanha([...gruposApi, ...manuaisExtras]);
                 } else if (resGrupos.statusCode === 403 || resGrupos.statusCode === 429) {
                     bateuRateLimitGrupos = true;
                     console.warn(`[⚠️ SENDFLOW] Rate-limit ao buscar grupos de "${rel.name}". Preservando grupos em cache.`);
                 }
             }
 
+            const gruposUnicos = deduplicarGruposDaCampanha(gruposFinais);
             novasCampanhas.push({
                 id: rel.id,
                 name: rel.name,
@@ -340,8 +405,8 @@ async function sincronizarCampanhasSendflow(forcar = false) {
                 groupNameSuffix: rel.groupNameSuffix || antiga?.groupNameSuffix || '',
                 type: rel.type || 'WhatsRelease',
                 archived: false,
-                totalGrupos: gruposFinais.length,
-                grupos: gruposFinais,
+                totalGrupos: gruposUnicos.length,
+                grupos: gruposUnicos,
                 gruposIgnorados
             });
         }
@@ -434,7 +499,7 @@ async function sincronizarGruposCampanha(releaseId) {
         const gidsApi = new Set(gruposApi.map(x => x.gid || x.jid || x.name).filter(Boolean));
         const manuaisExtras = gruposManuais.filter(m => !gidsApi.has(m.gid) && !gidsApi.has(m.name));
 
-        camp.grupos = [...gruposApi, ...manuaisExtras];
+        camp.grupos = deduplicarGruposDaCampanha([...gruposApi, ...manuaisExtras]);
         camp.totalGrupos = camp.grupos.length;
         cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
         salvarCampanhasLocais();
@@ -474,7 +539,7 @@ function adicionarGrupoManualCampanha(releaseId, { gid, name, participantsAmount
         gidLimpo = `${gidLimpo}@g.us`;
     }
 
-    const indexExistente = camp.grupos.findIndex(g => (gidLimpo && g.gid === gidLimpo) || (name && g.name === name));
+    const indexExistente = camp.grupos.findIndex(g => (gidLimpo && g.gid === gidLimpo) || (name && (g.name === name || nomesDeGrupoSaoIguais(g.name, name))));
     if (indexExistente !== -1) {
         if (name) camp.grupos[indexExistente].name = name;
         if (gidLimpo) {
@@ -760,7 +825,7 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
         }
     }
 
-    // 2. Busca por nome EXATO entre os grupos explicitamente cadastrados em camp.grupos
+    // 2. Busca por nome EXATO ou NORMALIZADO entre os grupos explicitamente cadastrados em camp.grupos
     if (nomeLimpo) {
         const nomeAlvoLower = nomeLimpo.toLowerCase();
         for (const camp of cacheCampanhas.campanhas) {
@@ -771,12 +836,13 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
             for (const g of camp.grupos) {
                 if (!g.name) continue;
                 const gNomeLower = String(g.name).trim().toLowerCase();
-                if (gNomeLower && gNomeLower === nomeAlvoLower) {
+                const matchNome = (gNomeLower && gNomeLower === nomeAlvoLower) || nomesDeGrupoSaoIguais(g.name, nomeLimpo);
+                if (matchNome) {
                     const gGidPuro = extrairGidPuro(g.gid || g.jid);
                     if (gGidPuro && gidPuroAlvo && gGidPuro !== gidPuroAlvo) {
                         continue;
                     }
-                    if (!g.gid && idLimpo && idLimpo.includes('@g.us')) {
+                    if ((!g.gid || !g.gid.includes('@g.us')) && idLimpo && idLimpo.includes('@g.us')) {
                         g.gid = idLimpo;
                         g.jid = idLimpo;
                         if (participantsAmount > 0) g.participantsAmount = participantsAmount;
@@ -853,7 +919,31 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
 
             if (bateuEstrito) {
                 if (!Array.isArray(camp.grupos)) camp.grupos = [];
-                if (idLimpo && idLimpo.includes('@g.us') && !camp.grupos.some(g => g.gid === idLimpo)) {
+
+                // Verifica se já existe um grupo correspondente nesta campanha para NUNCA duplicar
+                const jaExiste = camp.grupos.find(g => {
+                    if (idLimpo && g.gid && g.gid === idLimpo) return true;
+                    if (nomesDeGrupoSaoIguais(g.name, nomeLimpo)) return true;
+                    return false;
+                });
+
+                if (jaExiste) {
+                    if (idLimpo && idLimpo.includes('@g.us') && (!jaExiste.gid || !jaExiste.gid.includes('@g.us'))) {
+                        jaExiste.gid = idLimpo;
+                        jaExiste.jid = idLimpo;
+                        salvarCampanhasLocais();
+                    }
+                    return {
+                        releaseId: camp.id,
+                        nomeCampanha: camp.name,
+                        idGrupo: idLimpo || jaExiste.gid,
+                        nomeGrupo: jaExiste.name || nomeLimpo,
+                        campanhaObj: camp
+                    };
+                }
+
+                // Apenas se realmente for um grupo NOVO criado mid-launch que ainda não constava na campanha
+                if (idLimpo && idLimpo.includes('@g.us')) {
                     camp.grupos.push({
                         id: idLimpo,
                         name: nomeLimpo,
@@ -864,6 +954,7 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
                         participantsAmount: Number(participantsAmount) || 0,
                         origem: 'SendFlow-WhatsApp'
                     });
+                    camp.grupos = deduplicarGruposDaCampanha(camp.grupos);
                     camp.totalGrupos = camp.grupos.length;
                     cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
                     salvarCampanhasLocais();
