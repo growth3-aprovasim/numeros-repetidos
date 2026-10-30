@@ -2696,34 +2696,8 @@ function vincularListenersRealtime(sniper) {
             nomeGrupo = infoCamp.nomeGrupo || idGrupo;
         }
 
-        // Fallback: se ainda não encontrou campanha, busca nos grupos já mapeados em memória
-        if (!infoCamp && idGrupo) {
-            for (const [cId, grps] of mapaGruposPorCampanha.entries()) {
-                if (grps.has(idGrupo)) {
-                    const g = grps.get(idGrupo);
-                    infoCamp = {
-                        idCampanha: cId,
-                        nomeCampanha: mapaInfoCampanhas.get(cId)?.name || cId,
-                        nomeGrupo: g?.subject || nomeGrupo || idGrupo
-                    };
-                    break;
-                }
-            }
-        }
-
-        // Se ainda não identificou mas o ADM que recebeu pertence a uma campanha conhecida, herda a campanha
-        if (!infoCamp) {
-            const metaSniper = obterMetaSniper(sniper.indice);
-            if (metaSniper && metaSniper.campaignId) {
-                infoCamp = {
-                    idCampanha: metaSniper.campaignId,
-                    nomeCampanha: metaSniper.campaignName || 'Campanha SendFlow',
-                    nomeGrupo: nomeGrupo
-                };
-            }
-        }
-
-        // Se o grupo não pertence a nenhuma campanha do SendFlow em andamento, ignora
+        // REGRA ABSOLUTA DO USUÁRIO:
+        // Se o grupo não pertence a nenhuma campanha cadastrada na aba SendFlow, ignora completamente
         if (!infoCamp || !infoCamp.idCampanha) {
             return;
         }
@@ -3007,16 +2981,6 @@ async function executarPatrulhaContinua() {
         // Audita saturação e leads restritos em memória (0 chamadas de rede, ultra rápido e seguro)
         for (const idCamp of mapaGruposPorCampanha.keys()) {
             await auditarSaturacaoECrocodilos(idCamp);
-        }
-
-        // Mapeia no máximo 1 ADM cujo cache tenha expirado (> 15 min) e não esteja em cooldown de rate-limit
-        const proximoParaMapear = operacionais.find(s => {
-            if (cooldownRateLimitSniper.has(s.indice) && Date.now() < cooldownRateLimitSniper.get(s.indice)) return false;
-            const ult = ultimoMapeamentoPorSniper.get(s.indice) || 0;
-            return (Date.now() - ult) > INTERVALO_MINIMO_MAPEAMENTO_MS;
-        });
-        if (proximoParaMapear) {
-            enfileirarMapeamentoSniper(proximoParaMapear);
         }
 
         // Processa eventuais kicks pendentes na fila
