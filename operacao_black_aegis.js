@@ -1000,13 +1000,14 @@ function sniperEstaOperacional(s) {
     return Boolean(s && s.conectado && s.sock && s.sock.user && s.sock.ws?.isOpen !== false);
 }
 
+const cooldownRateLimitSniper = new Map(); // indice -> timestamp (ms) até quando está em pausa
 const cacheMetaEmVoo = new Map(); // idGrupo -> Promise<meta>
 const cacheMetaRecente = new Map(); // idGrupo -> { meta, ts }
 
 async function obterMetadataGrupoResiliente(idGrupo, sniperPreferencial = null) {
     const agora = Date.now();
     const recente = cacheMetaRecente.get(idGrupo);
-    if (recente && (agora - recente.ts) < 2500) {
+    if (recente && (agora - recente.ts) < 15000) {
         return recente.meta;
     }
     if (cacheMetaEmVoo.has(idGrupo)) {
@@ -1022,19 +1023,35 @@ async function obterMetadataGrupoResiliente(idGrupo, sniperPreferencial = null) 
             return meta;
         };
 
-        if (sniperPreferencial && sniperEstaOperacional(sniperPreferencial)) {
+        const sniperPodeConsultar = (s) => {
+            if (!sniperEstaOperacional(s)) return false;
+            const ate = cooldownRateLimitSniper.get(s.indice);
+            if (ate && Date.now() < ate) return false;
+            return true;
+        };
+
+        if (sniperPreferencial && sniperPodeConsultar(sniperPreferencial)) {
             try {
                 const meta = await sniperPreferencial.sock.groupMetadata(idGrupo);
                 if (meta) return registrarMeta(meta);
-            } catch (e) { }
+            } catch (e) {
+                if (/rate-overlimit|429/i.test(e?.message)) {
+                    cooldownRateLimitSniper.set(sniperPreferencial.indice, Date.now() + 10 * 60 * 1000);
+                }
+            }
         }
         const candidatos = obterSnipersDisponiveis(idGrupo);
         for (const s of candidatos) {
             if (sniperPreferencial && s.indice === sniperPreferencial.indice) continue;
+            if (!sniperPodeConsultar(s)) continue;
             try {
                 const meta = await s.sock.groupMetadata(idGrupo);
                 if (meta) return registrarMeta(meta);
-            } catch (e) { }
+            } catch (e) {
+                if (/rate-overlimit|429/i.test(e?.message)) {
+                    cooldownRateLimitSniper.set(s.indice, Date.now() + 10 * 60 * 1000);
+                }
+            }
         }
         return null;
     })();
@@ -1261,16 +1278,91 @@ function obterSnipersDisponiveis(idGrupo) {
 // =====================================================================
 // 📋 AUTO-MAPEAMENTO DE GRUPOS E ADMS VIA WHATSAPP (ESTRITAMENTE SENDFLOW)
 // =====================================================================
-async function mapearGruposDoSniper(sniperObj) {
+const ultimoMapeamentoPorSniper = new Map(); // indice -> timestamp
+const mapeamentoEmAndamento = new Set(); // Set<indice>
+const INTERVALO_MINIMO_MAPEAMENTO_MS = 15 * 60 * 1000; // 15 minutos de cache mínimo por ADM
+
+// Fila serializada anti-rate-limit para mapeamento de grupos
+let filaMapeamento = [];
+let processandoFilaMapeamento = false;
+
+async function enfileirarMapeamentoSniper(sniperObj, forcar = false) {
     if (!sniperObj || !sniperEstaOperacional(sniperObj)) return;
+    const indice = sniperObj.indice;
+
+    if (cooldownRateLimitSniper.has(indice) && Date.now() < cooldownRateLimitSniper.get(indice)) {
+        return;
+    }
+
+    if (!forcar && ultimoMapeamentoPorSniper.has(indice)) {
+        const decorrido = Date.now() - ultimoMapeamentoPorSniper.get(indice);
+        if (decorrido < INTERVALO_MINIMO_MAPEAMENTO_MS) {
+            return;
+        }
+    }
+
+    if (!filaMapeamento.some(item => item.indice === indice)) {
+        filaMapeamento.push({ sniperObj, indice, forcar });
+    }
+
+    if (!processandoFilaMapeamento) {
+        processarFilaMapeamento().catch(() => {});
+    }
+}
+
+async function processarFilaMapeamento() {
+    if (processandoFilaMapeamento) return;
+    processandoFilaMapeamento = true;
     try {
-        const indice = sniperObj.indice;
+        while (filaMapeamento.length > 0) {
+            const item = filaMapeamento.shift();
+            if (item && item.sniperObj && sniperEstaOperacional(item.sniperObj)) {
+                await executarMapeamentoDiretoDoSniper(item.sniperObj, item.forcar);
+                if (filaMapeamento.length > 0) {
+                    await sleep(2500); // Pausa anti-rate-limit entre ADMs
+                }
+            }
+        }
+    } finally {
+        processandoFilaMapeamento = false;
+    }
+}
+
+async function executarMapeamentoDiretoDoSniper(sniperObj, forcar = false) {
+    if (!sniperObj || !sniperEstaOperacional(sniperObj)) return;
+    const indice = sniperObj.indice;
+
+    // Se está em cooldown de rate-limit do WhatsApp, não repete consultas para evitar bloqueio
+    if (cooldownRateLimitSniper.has(indice)) {
+        const ate = cooldownRateLimitSniper.get(indice);
+        if (Date.now() < ate) {
+            return;
+        } else {
+            cooldownRateLimitSniper.delete(indice);
+        }
+    }
+
+    // Se não for forçado, respeita o cache mínimo de 15 minutos por ADM
+    if (!forcar && ultimoMapeamentoPorSniper.has(indice)) {
+        const decorrido = Date.now() - ultimoMapeamentoPorSniper.get(indice);
+        if (decorrido < INTERVALO_MINIMO_MAPEAMENTO_MS) {
+            return;
+        }
+    }
+
+    if (mapeamentoEmAndamento.has(indice)) return;
+    mapeamentoEmAndamento.add(indice);
+
+    try {
         const metaSniper = obterMetaSniper(indice);
         const campaignName = metaSniper?.campaignName || 'Campanha SendFlow';
 
         console.log(`[🔍 ADM 0${indice}] Mapeando grupos vinculados ao SendFlow via WhatsApp...`);
         const allGroups = await sniperObj.sock.groupFetchAllParticipating();
         const groupIds = Object.keys(allGroups);
+
+        ultimoMapeamentoPorSniper.set(indice, Date.now());
+        cooldownRateLimitSniper.delete(indice);
 
         let gruposMapeados = 0;
         let gruposIgnorados = 0;
@@ -1345,8 +1437,21 @@ async function mapearGruposDoSniper(sniperObj) {
             await auditarSaturacaoECrocodilos(idCamp);
         }
     } catch (err) {
-        console.error(`[!] Erro ao mapear grupos do ADM 0${sniperObj.indice}:`, err.message);
+        const msg = err?.message || String(err);
+        const ehRateLimit = /rate-overlimit|rate.*limit|429/i.test(msg) || err?.output?.statusCode === 429;
+        if (ehRateLimit) {
+            cooldownRateLimitSniper.set(indice, Date.now() + 10 * 60 * 1000); // 10 min de pausa de consultas
+            console.warn(`[⏳ ADM 0${indice}] WhatsApp em pausa de consultas (rate-overlimit 429). Cooldown de 10 min ativado. O Sentinela em tempo real segue 100% ativo!`);
+        } else {
+            console.error(`[!] Erro ao mapear grupos do ADM 0${indice}:`, msg);
+        }
+    } finally {
+        mapeamentoEmAndamento.delete(indice);
     }
+}
+
+async function mapearGruposDoSniper(sniperObj, forcar = false) {
+    return enfileirarMapeamentoSniper(sniperObj, forcar);
 }
 
 // =====================================================================
@@ -2103,55 +2208,9 @@ async function executarLimpezaInicial() {
 
     const snipersOperacionais = snipersAtivos.filter(sniperEstaOperacional);
     for (const sniper of snipersOperacionais) {
-        try {
-            const all = await sniper.sock.groupFetchAllParticipating();
-            for (const id in all) {
-                const g = all[id];
-                // REGRA ESTRITA: Ignora completamente grupos antigos que não pertençam às campanhas SendFlow
-                const infoCamp = obterInfoCompletaCampanha(id, g.subject);
-                if (!infoCamp || !infoCamp.idCampanha) continue;
-
-                const { idCampanha } = infoCamp;
-                const mapaGruposDestaCampanha = obterGruposCampanha(idCampanha);
-
-                for (const p of (g.participants || [])) {
-                    registrarMapeamentoLid(p);
-                }
-
-                if (!mapaGruposDestaCampanha.has(id) || (mapaGruposDestaCampanha.get(id).participants?.length || 0) < (g.participants?.length || 0)) {
-                    mapaGruposDestaCampanha.set(id, g);
-                }
-            }
-
-            // 2ª Passada: Após todos os LIDs mapeados no ADM, identifica admins e permissões com resolução completa
-            for (const id in all) {
-                const g = all[id];
-                const infoCamp = obterInfoCompletaCampanha(id, g.subject);
-                if (!infoCamp || !infoCamp.idCampanha) continue;
-
-                for (const p of (g.participants || [])) {
-                    if (p.admin === 'admin' || p.admin === 'superadmin') {
-                        const n = extrairNumeroParticipante(p);
-                        if (n) {
-                            adminsGlobais.add(n);
-                            adminsGlobais.add(normalizarID(n));
-                        }
-                    }
-                }
-
-                const meuNum = extrairNumeroLimpo(sniper.sock.user?.id);
-                const eu = g.participants?.find(p => {
-                    const pNum = extrairNumeroParticipante(p);
-                    return meuNum && pNum && (meuNum === pNum || normalizarID(meuNum) === normalizarID(pNum));
-                });
-
-                if (eu && (eu.admin === 'admin' || eu.admin === 'superadmin')) {
-                    if (!mapaAdminGrupos.has(id)) mapaAdminGrupos.set(id, new Set());
-                    mapaAdminGrupos.get(id).add(sniper.indice);
-                }
-            }
-        } catch (e) {
-            console.error(`[!] Erro na varredura do ADM 0${sniper.indice}:`, e.message);
+        await executarMapeamentoDiretoDoSniper(sniper, false);
+        if (snipersOperacionais.length > 1) {
+            await sleep(2500); // Pausa anti-rate-limit entre ADMs
         }
     }
 
@@ -2587,6 +2646,16 @@ function vincularListenersRealtime(sniper) {
                         const metaFresca = await obterMetadataGrupoResiliente(idGrupo, sniper);
                         if (metaFresca && metaFresca.participants) {
                             mapaGruposCampanha.set(idGrupo, metaFresca);
+                            const pEncontrado = metaFresca.participants.find(p => {
+                                const pLid = extrairNumeroLimpo(p.lid || p.id);
+                                return pLid === lidLimpo;
+                            });
+                            if (pEncontrado) {
+                                const tel = extrairNumeroParticipante(pEncontrado);
+                                if (tel && tel !== lidLimpo) {
+                                    mapaLidParaTelefone.set(lidLimpo, tel);
+                                }
+                            }
                         }
                     } catch (e) { }
                 }
@@ -2823,13 +2892,27 @@ async function executarPatrulhaContinua() {
             }
         }
 
-        // 2. Re-mapeia e audita todas as campanhas ativas do SendFlow usando os ADMs operacionais sobreviventes
+        // 2. Garante vigilância em tempo real e audita campanhas em RAM sem sobrecarregar o WhatsApp
         const operacionais = snipersAtivos.filter(sniperEstaOperacional);
         if (operacionais.length === 0) return;
 
         for (const sniper of operacionais) {
             vincularListenersRealtime(sniper);
-            await mapearGruposDoSniper(sniper);
+        }
+
+        // Audita saturação e leads restritos em memória (0 chamadas de rede, ultra rápido e seguro)
+        for (const idCamp of mapaGruposPorCampanha.keys()) {
+            await auditarSaturacaoECrocodilos(idCamp);
+        }
+
+        // Mapeia no máximo 1 ADM cujo cache tenha expirado (> 15 min) e não esteja em cooldown de rate-limit
+        const proximoParaMapear = operacionais.find(s => {
+            if (cooldownRateLimitSniper.has(s.indice) && Date.now() < cooldownRateLimitSniper.get(s.indice)) return false;
+            const ult = ultimoMapeamentoPorSniper.get(s.indice) || 0;
+            return (Date.now() - ult) > INTERVALO_MINIMO_MAPEAMENTO_MS;
+        });
+        if (proximoParaMapear) {
+            enfileirarMapeamentoSniper(proximoParaMapear);
         }
 
         // Processa eventuais kicks pendentes na fila
