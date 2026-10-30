@@ -854,7 +854,63 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
         }
     }
 
-    // Grupos que não estão cadastrados no SendFlow não são monitorados
+    // 3. Fallback inteligente e resiliente para campanhas ativas do SendFlow
+    // Reconhece instantaneamente grupos por tags oficiais [BV-26], [PI-NOV-26], [PES-PPE-26] ou nomes da campanha
+    // Isso garante detecção em TEMPO REAL mesmo se o ID exato ainda não foi salvo em camp.grupos
+    if (nomeLimpo) {
+        const nomeGrupoLower = nomeLimpo.toLowerCase();
+        const tagGrupoMatch = nomeLimpo.match(/\[(.*?)\]/);
+        const tagGrupoLower = tagGrupoMatch && tagGrupoMatch[1] ? tagGrupoMatch[1].trim().toLowerCase() : null;
+
+        for (const camp of cacheCampanhas.campanhas) {
+            if (camp.archived) continue;
+            const campName = String(camp.name || '').trim();
+            const campNameLower = campName.toLowerCase();
+            const tagCampMatch = campName.match(/\[(.*?)\]/);
+            const tagCampLower = tagCampMatch && tagCampMatch[1] ? tagCampMatch[1].trim().toLowerCase() : null;
+
+            // Se o grupo tem tag e a campanha tem tag diferente, não mistura
+            if (tagGrupoLower && tagCampLower && tagGrupoLower !== tagCampLower) continue;
+
+            let bateu = false;
+            // 3.1. Tag entre colchetes idêntica (ex: [BV-26], [PI-NOV-26], [PES-PPE-26])
+            if (tagCampLower && tagCampLower.length >= 3 && nomeGrupoLower.includes(`[${tagCampLower}]`)) {
+                bateu = true;
+            } else if (tagCampLower && tagCampLower.length >= 3 && nomeGrupoLower.includes(tagCampLower)) {
+                bateu = true;
+            }
+
+            // 3.2. Nome base ou palavras-chave das campanhas ativas
+            if (!bateu) {
+                const removerAcentos = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                const nomeGrupoSemAcento = removerAcentos(nomeGrupoLower);
+                const nomeBaseCampanha = removerAcentos(campNameLower.replace(/\[.*?\]/g, '').trim());
+                if (nomeBaseCampanha.length >= 5 && nomeGrupoSemAcento.includes(nomeBaseCampanha)) {
+                    bateu = true;
+                } else if (/inss/i.test(campNameLower) && /inss/i.test(nomeGrupoLower)) {
+                    bateu = true;
+                } else if (/tj-sp|tjsp/i.test(campNameLower) && /tj-sp|tjsp|tribunal/i.test(nomeGrupoLower)) {
+                    bateu = true;
+                } else if (/vital[ií]cia|black/i.test(campNameLower) && /black|vital[ií]cia|vitalicia/i.test(nomeGrupoLower)) {
+                    bateu = true;
+                } else if (/base\s*forte/i.test(campNameLower) && /base\s*forte/i.test(nomeGrupoLower)) {
+                    bateu = true;
+                }
+            }
+
+            if (bateu) {
+                return {
+                    releaseId: camp.id,
+                    nomeCampanha: camp.name,
+                    idGrupo: idLimpo,
+                    nomeGrupo: nomeLimpo,
+                    campanhaObj: camp
+                };
+            }
+        }
+    }
+
+    // Grupos que não pertencem a nenhuma campanha ativa do SendFlow são ignorados
     return null;
 }
 

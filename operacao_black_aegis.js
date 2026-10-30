@@ -2696,9 +2696,34 @@ function vincularListenersRealtime(sniper) {
             nomeGrupo = infoCamp.nomeGrupo || idGrupo;
         }
 
-        // REGRA ESTRITA DO USUÁRIO:
-        // Se o grupo NÃO pertence a nenhuma campanha vinculada no SendFlow / aba Campanhas SendFlow & ADMs,
-        // ignora completamente o evento (não vigia grupos antigos em que o chip já estava).
+        // Fallback: se ainda não encontrou campanha, busca nos grupos já mapeados em memória
+        if (!infoCamp && idGrupo) {
+            for (const [cId, grps] of mapaGruposPorCampanha.entries()) {
+                if (grps.has(idGrupo)) {
+                    const g = grps.get(idGrupo);
+                    infoCamp = {
+                        idCampanha: cId,
+                        nomeCampanha: mapaInfoCampanhas.get(cId)?.name || cId,
+                        nomeGrupo: g?.subject || nomeGrupo || idGrupo
+                    };
+                    break;
+                }
+            }
+        }
+
+        // Se ainda não identificou mas o ADM que recebeu pertence a uma campanha conhecida, herda a campanha
+        if (!infoCamp) {
+            const metaSniper = obterMetaSniper(sniper.indice);
+            if (metaSniper && metaSniper.campaignId) {
+                infoCamp = {
+                    idCampanha: metaSniper.campaignId,
+                    nomeCampanha: metaSniper.campaignName || 'Campanha SendFlow',
+                    nomeGrupo: nomeGrupo
+                };
+            }
+        }
+
+        // Se o grupo não pertence a nenhuma campanha do SendFlow em andamento, ignora
         if (!infoCamp || !infoCamp.idCampanha) {
             return;
         }
