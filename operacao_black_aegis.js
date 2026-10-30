@@ -42,7 +42,8 @@ const termosSilenciados = [
     'Closing session', 'Closing open session', 'SessionEntry',
     'prekey bundle', 'ephemeralKeyPair', 'registrationId', 'Bad MAC',
     'Failed to decrypt message', 'Session error', 'overwriting prekey',
-    'no session found to decrypt', 'libsignal', '_chains', 'currentRatchet'
+    'no session found to decrypt', 'libsignal', '_chains', 'currentRatchet',
+    'Timed Out', 'rate-overlimit', 'Connection Closed', 'Stream Errored (conflict)', 'conflict'
 ];
 
 const silenciador = (args) => {
@@ -632,13 +633,17 @@ const feedEventos = [];
 // Estado em RAM das contas de ADMs (para QR Code & Pairing Code via site)
 const estadoAdms = new Map();
 const timersReconexao = new Map();
+const socketsAtivosPorIndice = new Map(); // indice -> socket Baileys ativo
+const conexoesEmAndamento = new Map(); // indice -> Promise em voo
+const contadoresConflito440 = new Map(); // indice -> { count, lastTs }
 
-function agendarReconexao(indice, ms = 2500) {
+function agendarReconexao(indice, ms = 3000) {
     cancelarReconexao(indice);
+    const delayStagger = Math.max(ms, 3000) + ((indice % 5) * 1200);
     const t = setTimeout(() => {
         timersReconexao.delete(indice);
         conectarSniper(indice).catch(() => {});
-    }, ms);
+    }, delayStagger);
     timersReconexao.set(indice, t);
 }
 
@@ -1694,157 +1699,210 @@ async function conectarSniper(indice) {
     indice = Number(indice);
     cancelarReconexao(indice);
 
+    // Se já existe uma tentativa de conexão em andamento para este ADM, aguarda a mesma
+    if (conexoesEmAndamento.has(indice)) {
+        return conexoesEmAndamento.get(indice);
+    }
+
     const pastaAuth = obterPastaAuth(indice);
     if (!fs.existsSync(pastaAuth)) return null;
 
-    try {
-        const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
-        if (!state.creds.registered) {
-            estadoAdms.set(indice, {
-                indice,
-                conectado: false,
-                status: 'desconectado',
-                numero: null,
-                qrCodeDataUrl: null,
-                pairingCode: null,
-                erroMsg: null,
-                atualizadoEm: Date.now()
+    const promessaConexao = (async () => {
+        try {
+            const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
+            if (!state.creds.registered) {
+                estadoAdms.set(indice, {
+                    indice,
+                    conectado: false,
+                    status: 'desconectado',
+                    numero: null,
+                    qrCodeDataUrl: null,
+                    pairingCode: null,
+                    erroMsg: null,
+                    atualizadoEm: Date.now()
+                });
+                return null;
+            }
+
+            // Fecha socket anterior do mesmo slot, se existir, para evitar listeners órfãos e conflitos
+            const sockAntigo = socketsAtivosPorIndice.get(indice);
+            if (sockAntigo) {
+                try {
+                    sockAntigo.ev.removeAllListeners();
+                    if (sockAntigo.ws) sockAntigo.ws.close();
+                } catch (e) { }
+                socketsAtivosPorIndice.delete(indice);
+            }
+
+            const anterior = snipersAtivos.find(x => x.indice === indice);
+            if (anterior && anterior.sock && anterior.sock !== sockAntigo) {
+                try {
+                    anterior.sock.ev.removeAllListeners();
+                    if (anterior.sock.ws) anterior.sock.ws.close();
+                } catch (e) { }
+            }
+
+            const { version } = await fetchLatestBaileysVersion();
+            const sock = makeWASocket({
+                version,
+                auth: state,
+                printQRInTerminal: false,
+                logger: pino({ level: 'silent' }),
+                browser: Browsers.ubuntu('Chrome'),
+                markOnlineOnConnect: true,
+                generateHighQualityLinkPreview: true,
+                syncFullHistory: false,
+                defaultQueryTimeoutMs: 60_000,
+                connectTimeoutMs: 60_000,
+                getMessage: async () => ({ conversation: '' })
             });
-            return null;
-        }
 
-        // Fecha socket anterior do mesmo slot, se existir, para evitar listeners órfãos
-        const anterior = snipersAtivos.find(x => x.indice === indice);
-        if (anterior && anterior.sock) {
-            try {
-                anterior.sock.ev.removeAllListeners();
-                if (anterior.sock.ws) anterior.sock.ws.close();
-            } catch (e) { }
-        }
+            socketsAtivosPorIndice.set(indice, sock);
+            sock.ev.on('creds.update', saveCreds);
 
-        const { version } = await fetchLatestBaileysVersion();
-        const sock = makeWASocket({
-            version,
-            auth: state,
-            printQRInTerminal: false,
-            logger: pino({ level: 'silent' }),
-            browser: Browsers.ubuntu('Chrome'),
-            markOnlineOnConnect: true,
-            generateHighQualityLinkPreview: true,
-            syncFullHistory: false,
-            defaultQueryTimeoutMs: 60_000,
-            connectTimeoutMs: 60_000,
-            getMessage: async () => ({ conversation: '' })
-        });
+            return new Promise((resolve) => {
+                let resolvido = false;
+                const finalizarPromise = (valor) => {
+                    if (!resolvido) {
+                        resolvido = true;
+                        clearTimeout(timeoutBoot);
+                        conexoesEmAndamento.delete(indice);
+                        resolve(valor);
+                    }
+                };
 
-        sock.ev.on('creds.update', saveCreds);
+                // Timeout de segurança para nunca travar a inicialização caso um ADM esteja banido ou sem resposta
+                const timeoutBoot = setTimeout(() => {
+                    finalizarPromise(null);
+                }, 15000);
 
-        return new Promise((resolve) => {
-            let resolvido = false;
-            const finalizarPromise = (valor) => {
-                if (!resolvido) {
-                    resolvido = true;
-                    clearTimeout(timeoutBoot);
-                    resolve(valor);
-                }
-            };
-
-            // Timeout de segurança para nunca travar a inicialização caso um ADM esteja banido ou sem resposta
-            const timeoutBoot = setTimeout(() => {
-                finalizarPromise(null);
-            }, 15000);
-
-            sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
-                if (connection === 'open') {
-                    cancelarReconexao(indice);
-                    const num = extrairNumeroLimpo(sock.user?.id);
-                    console.log(`[✅ ADM 0${indice}] Conectado e de olho nos grupos SendFlow (+${num})`);
-                    adicionarEventoFeed('ADM', `✅ Administrador 0${indice} operacional (+${formatarExibicao(num)})`);
-
-                    let sniperObj = snipersAtivos.find(x => x.indice === indice);
-                    if (!sniperObj) {
-                        sniperObj = { indice, sock, conectado: true };
-                        snipersAtivos.push(sniperObj);
-                    } else {
-                        sniperObj.sock = sock;
-                        sniperObj.conectado = true;
+                sock.ev.on('connection.update', async ({ connection, lastDisconnect }) => {
+                    // Se este socket não é mais o socket ativo para este índice, encerra imediatamente e não agenda reconexão
+                    if (socketsAtivosPorIndice.get(indice) !== sock) {
+                        try {
+                            sock.ev.removeAllListeners();
+                            if (sock.ws) sock.ws.close();
+                        } catch (e) { }
+                        return;
                     }
 
-                    estadoAdms.set(indice, {
-                        indice,
-                        conectado: true,
-                        status: 'conectado',
-                        numero: num,
-                        qrCodeDataUrl: null,
-                        pairingCode: null,
-                        erroMsg: null,
-                        atualizadoEm: Date.now()
-                    });
+                    if (connection === 'open') {
+                        cancelarReconexao(indice);
+                        contadoresConflito440.delete(indice);
 
-                    sentinelaRealtimeAtivo = true;
-                    vincularListenersRealtime(sniperObj);
-                    mapearGruposDoSniper(sniperObj).catch(() => {});
-                    setTimeout(autoSalvarBackupSessoes, 2000);
+                        const num = extrairNumeroLimpo(sock.user?.id);
+                        console.log(`[✅ ADM 0${indice}] Conectado e de olho nos grupos SendFlow (+${num})`);
+                        adicionarEventoFeed('ADM', `✅ Administrador 0${indice} operacional (+${formatarExibicao(num)})`);
 
-                    finalizarPromise(sniperObj);
-                }
-                if (connection === 'close') {
-                    const sniperObj = snipersAtivos.find(x => x.indice === indice);
-                    if (sniperObj) sniperObj.conectado = false;
-
-                    // Remove imediatamente este ADM do mapa de permissões de grupos para acionar failover imediato
-                    for (const setAdms of mapaAdminGrupos.values()) {
-                        setAdms.delete(indice);
-                    }
-
-                    const statusCode = lastDisconnect?.error?.output?.statusCode;
-                    const erroMsg = lastDisconnect?.error?.message || '';
-                    const ehBanido = statusCode === 403 ||
-                                     statusCode === DisconnectReason.forbidden ||
-                                     /banned|forbidden|account.*disabled/i.test(erroMsg);
-                    const ehLogout = statusCode === DisconnectReason.loggedOut ||
-                                     statusCode === 401 ||
-                                     statusCode === 405 ||
-                                     ehBanido;
-
-                    if (ehLogout) {
-                        const motivoTxt = ehBanido ? 'BANIDO/BLOQUEADO pelo WhatsApp' : 'Deslogado pelo WhatsApp';
-                        console.log(`[❌ ADM 0${indice}] ${motivoTxt} (Status ${statusCode || 'N/A'}: ${erroMsg}). Failover automático ativado nos demais ADMs!`);
-                        adicionarEventoFeed('ALERTA', `⚠️ ADM 0${indice} foi ${motivoTxt}. Failover ativo: os demais ADMs assumiram a proteção sem interrupção!`);
+                        let sniperObj = snipersAtivos.find(x => x.indice === indice);
+                        if (!sniperObj) {
+                            sniperObj = { indice, sock, conectado: true };
+                            snipersAtivos.push(sniperObj);
+                        } else {
+                            sniperObj.sock = sock;
+                            sniperObj.conectado = true;
+                        }
 
                         estadoAdms.set(indice, {
                             indice,
-                            conectado: false,
-                            status: ehBanido ? 'banido' : 'desconectado',
-                            numero: null,
+                            conectado: true,
+                            status: 'conectado',
+                            numero: num,
                             qrCodeDataUrl: null,
                             pairingCode: null,
-                            erroMsg: ehBanido ? 'Chip banido ou restrito pelo WhatsApp. Conecte outro número neste slot.' : 'Sessão desconectada pelo WhatsApp.',
+                            erroMsg: null,
                             atualizadoEm: Date.now()
                         });
-                        try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
-                        finalizarPromise(null);
 
-                        // Dispara re-verificação imediata com os ADMs sobreviventes para nenhuma regra deixar de ser aplicada
-                        setTimeout(() => {
-                            processarFilaKicksRealtime().catch(() => {});
-                            executarPatrulhaContinua().catch(() => {});
-                        }, 1500);
-                    } else {
-                        console.log(`[⚠️ ADM 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'} - ${erroMsg}). Reconectando em 3s...`);
-                        agendarReconexao(indice, 3000);
-                        finalizarPromise(null);
-                        setTimeout(() => {
-                            processarFilaKicksRealtime().catch(() => {});
-                        }, 500);
+                        sentinelaRealtimeAtivo = true;
+                        vincularListenersRealtime(sniperObj);
+                        mapearGruposDoSniper(sniperObj).catch(() => {});
+                        setTimeout(autoSalvarBackupSessoes, 2000);
+
+                        finalizarPromise(sniperObj);
                     }
-                }
+                    if (connection === 'close') {
+                        const sniperObj = snipersAtivos.find(x => x.indice === indice);
+                        if (sniperObj) sniperObj.conectado = false;
+
+                        // Remove imediatamente este ADM do mapa de permissões de grupos para acionar failover imediato
+                        for (const setAdms of mapaAdminGrupos.values()) {
+                            setAdms.delete(indice);
+                        }
+
+                        const statusCode = lastDisconnect?.error?.output?.statusCode;
+                        const erroMsg = lastDisconnect?.error?.message || '';
+                        const ehBanido = statusCode === 403 ||
+                                         statusCode === DisconnectReason.forbidden ||
+                                         /banned|forbidden|account.*disabled/i.test(erroMsg);
+                        const ehLogout = statusCode === DisconnectReason.loggedOut ||
+                                         statusCode === 401 ||
+                                         statusCode === 405 ||
+                                         ehBanido;
+
+                        const ehConflito440 = statusCode === 440 ||
+                                              statusCode === DisconnectReason.connectionReplaced ||
+                                              /conflict|connectionReplaced/i.test(erroMsg);
+
+                        if (ehLogout) {
+                            const motivoTxt = ehBanido ? 'BANIDO/BLOQUEADO pelo WhatsApp' : 'Deslogado pelo WhatsApp';
+                            console.log(`[❌ ADM 0${indice}] ${motivoTxt} (Status ${statusCode || 'N/A'}: ${erroMsg}). Failover automático ativado nos demais ADMs!`);
+                            adicionarEventoFeed('ALERTA', `⚠️ ADM 0${indice} foi ${motivoTxt}. Failover ativo: os demais ADMs assumiram a proteção sem interrupção!`);
+
+                            estadoAdms.set(indice, {
+                                indice,
+                                conectado: false,
+                                status: ehBanido ? 'banido' : 'desconectado',
+                                numero: null,
+                                qrCodeDataUrl: null,
+                                pairingCode: null,
+                                erroMsg: ehBanido ? 'Chip banido ou restrito pelo WhatsApp. Conecte outro número neste slot.' : 'Sessão desconectada pelo WhatsApp.',
+                                atualizadoEm: Date.now()
+                            });
+                            try { fs.rmSync(pastaAuth, { recursive: true, force: true }); } catch (e) { }
+                            finalizarPromise(null);
+
+                            // Dispara re-verificação imediata com os ADMs sobreviventes para nenhuma regra deixar de ser aplicada
+                            setTimeout(() => {
+                                processarFilaKicksRealtime().catch(() => {});
+                                executarPatrulhaContinua().catch(() => {});
+                            }, 1500);
+                        } else if (ehConflito440) {
+                            // Status 440: Outra sessão ou instância conectou com as mesmas credenciais
+                            const agora = Date.now();
+                            const reg = contadoresConflito440.get(indice) || { count: 0, lastTs: agora };
+                            if (agora - reg.lastTs < 120000) {
+                                reg.count++;
+                            } else {
+                                reg.count = 1;
+                            }
+                            reg.lastTs = agora;
+                            contadoresConflito440.set(indice, reg);
+
+                            const delayReconexao = reg.count > 3 ? 45000 : 15000;
+                            console.log(`[⚠️ ADM 0${indice}] Conflito de sessão (Status 440 - Stream Errored (conflict)). Outra instância conectou com este número. Aguardando ${delayReconexao / 1000}s para evitar colisão... (Tentativa ${reg.count})`);
+                            agendarReconexao(indice, delayReconexao);
+                            finalizarPromise(null);
+                        } else {
+                            console.log(`[⚠️ ADM 0${indice}] Conexão fechada temporariamente (Status ${statusCode || 'Drop'} - ${erroMsg}). Reconectando com espaçamento seguro...`);
+                            agendarReconexao(indice, 3000);
+                            finalizarPromise(null);
+                            setTimeout(() => {
+                                processarFilaKicksRealtime().catch(() => {});
+                            }, 500);
+                        }
+                    }
+                });
             });
-        });
-    } catch (e) {
-        console.error(`[!] Falha ao conectar ADM 0${indice}:`, e.message);
-        return null;
-    }
+        } catch (e) {
+            console.error(`[!] Falha ao conectar ADM 0${indice}:`, e.message);
+            conexoesEmAndamento.delete(indice);
+            return null;
+        }
+    })();
+
+    conexoesEmAndamento.set(indice, promessaConexao);
+    return promessaConexao;
 }
 
 // Conexão manual via site: QR Code OU Pairing Code
@@ -1897,6 +1955,15 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
     };
     estadoAdms.set(indice, estado);
 
+    const sockAntigo = socketsAtivosPorIndice.get(indice);
+    if (sockAntigo) {
+        try {
+            sockAntigo.ev.removeAllListeners();
+            if (sockAntigo.ws) sockAntigo.ws.close();
+        } catch (e) { }
+        socketsAtivosPorIndice.delete(indice);
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState(pastaAuth);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -1914,6 +1981,7 @@ async function conectarAdmManual({ indice, tipoConexao, numeroTelefone }) {
         getMessage: async () => ({ conversation: '' })
     });
 
+    socketsAtivosPorIndice.set(indice, sock);
     sock.ev.on('creds.update', saveCreds);
 
     // Se for código de pareamento, solicita o código de 8 dígitos
@@ -2884,7 +2952,7 @@ async function executarPatrulhaContinua() {
 
             const est = estadoAdms.get(idNum);
             const emPareamento = est && ['gerando_qr', 'qr_pronto', 'solicitando_codigo', 'codigo_pronto', 'banido'].includes(est.status);
-            if (emPareamento || timersReconexao.has(idNum)) continue;
+            if (emPareamento || timersReconexao.has(idNum) || conexoesEmAndamento.has(idNum)) continue;
 
             const pastaAuth = obterPastaAuth(idNum);
             if (fs.existsSync(path.join(pastaAuth, 'creds.json'))) {
