@@ -368,10 +368,8 @@ async function sincronizarCampanhasSendflow(forcar = false) {
             const gruposManuais = gruposPreservados.filter(g => g.origem === 'Manual');
 
             let gruposFinais = gruposPreservados;
-            const temVinculoAtivo = campanhaEstaVinculadaComAdm({ ...rel, grupos: gruposPreservados });
-
-            // Busca os grupos vinculados no SendFlow apenas para campanhas vinculadas com ADMs ou forçadas
-            if (!bateuRateLimitGrupos && temVinculoAtivo && (forcar || gruposPreservados.length === 0)) {
+            // Sincroniza os grupos oficiais de todas as campanhas ativas do SendFlow
+            if (!bateuRateLimitGrupos && (forcar || gruposPreservados.length === 0)) {
                 await sleep(1200);
                 const resGrupos = await requestSendflow(`/releases/${rel.id}/groups`);
                 if (resGrupos.statusCode === 200 && Array.isArray(resGrupos.data)) {
@@ -775,23 +773,10 @@ function extrairGidPuro(raw) {
     return String(raw).split('@')[0].replace(/\D/g, '').trim();
 }
 
-// Verifica se uma campanha do SendFlow possui ADMs ou grupos vinculados pelo usuário na aba Campanhas SendFlow & ADMs
+// Verifica se uma campanha do SendFlow está ativa para monitoramento
 function campanhaEstaVinculadaComAdm(camp) {
     if (!camp || camp.archived) return false;
-    const admsDedicados = cacheAdmsCampanhas[camp.id];
-    if (Array.isArray(admsDedicados) && admsDedicados.length > 0) return true;
-    if (Array.isArray(camp.grupos) && camp.grupos.length > 0) return true;
-
-    try {
-        if (fs.existsSync(ARQUIVO_SNIPERS_CAMPANHAS)) {
-            const snipers = JSON.parse(fs.readFileSync(ARQUIVO_SNIPERS_CAMPANHAS, 'utf-8'));
-            if (Array.isArray(snipers) && snipers.some(s => s && s.campaignId === camp.id)) {
-                return true;
-            }
-        }
-    } catch (e) { }
-
-    return false;
+    return true;
 }
 
 // Descobre a qual campanha um grupo pertence EXCLUSIVAMENTE pelas campanhas e grupos vinculados na aba Campanhas SendFlow & ADMs

@@ -1429,16 +1429,20 @@ async function executarMapeamentoDiretoDoSniper(sniperObj, forcar = false) {
                 }
             }
 
-            const eu = g.participants?.find(p => {
-                const pNum = extrairNumeroParticipante(p);
-                return meuNum && pNum && (meuNum === pNum || normalizarID(meuNum) === normalizarID(pNum));
-            });
-
-            if (eu && (eu.admin === 'admin' || eu.admin === 'superadmin')) {
-                if (!mapaAdminGrupos.has(gid)) mapaAdminGrupos.set(gid, new Set());
-                mapaAdminGrupos.get(gid).add(indice);
-            } else if (eu) {
-                mapaAdminGrupos.get(gid)?.delete(indice);
+            // Registra as permissões de admin de TODOS os ADMs ativos neste grupo de uma só vez
+            for (const s of snipersAtivos) {
+                const sNum = extrairNumeroLimpo(s.sock?.user?.id);
+                if (!sNum) continue;
+                const sPart = g.participants?.find(p => {
+                    const pNum = extrairNumeroParticipante(p);
+                    return pNum && (sNum === pNum || normalizarID(sNum) === normalizarID(pNum));
+                });
+                if (sPart && (sPart.admin === 'admin' || sPart.admin === 'superadmin')) {
+                    if (!mapaAdminGrupos.has(gid)) mapaAdminGrupos.set(gid, new Set());
+                    mapaAdminGrupos.get(gid).add(s.indice);
+                } else if (sPart) {
+                    mapaAdminGrupos.get(gid)?.delete(s.indice);
+                }
             }
         }
 
@@ -2284,11 +2288,9 @@ async function executarLimpezaInicial() {
     mapaPresencaPorCampanha.clear();
 
     const snipersOperacionais = snipersAtivos.filter(sniperEstaOperacional);
-    for (const sniper of snipersOperacionais) {
-        await executarMapeamentoDiretoDoSniper(sniper, false);
-        if (snipersOperacionais.length > 1) {
-            await sleep(2500); // Pausa anti-rate-limit entre ADMs
-        }
+    // Mapeamento seguro: o 1º ADM operacional mapeia os grupos e já unifica participantes e permissões de todos os ADMs sem risco de rate-limit
+    if (snipersOperacionais.length > 0) {
+        await executarMapeamentoDiretoDoSniper(snipersOperacionais[0], true);
     }
 
     console.log(`\n👑 Total de Administradores globais protegidos: ${adminsGlobais.size}`);
