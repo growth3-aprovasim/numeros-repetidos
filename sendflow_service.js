@@ -942,24 +942,8 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
                     };
                 }
 
-                // Apenas se realmente for um grupo NOVO criado mid-launch que ainda não constava na campanha
-                if (idLimpo && idLimpo.includes('@g.us')) {
-                    camp.grupos.push({
-                        id: idLimpo,
-                        name: nomeLimpo,
-                        gid: idLimpo,
-                        jid: idLimpo,
-                        inviteCode: '',
-                        full: false,
-                        participantsAmount: Number(participantsAmount) || 0,
-                        origem: 'SendFlow-WhatsApp'
-                    });
-                    camp.grupos = deduplicarGruposDaCampanha(camp.grupos);
-                    camp.totalGrupos = camp.grupos.length;
-                    cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
-                    salvarCampanhasLocais();
-                }
-
+                // Identifica o grupo como pertencente à campanha para catraca/vigilância,
+                // sem inflar artificialmente a lista camp.grupos (que é gerida estritamente pela API do SendFlow)
                 return {
                     releaseId: camp.id,
                     nomeCampanha: camp.name,
