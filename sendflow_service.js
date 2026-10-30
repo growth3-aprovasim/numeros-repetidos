@@ -194,12 +194,19 @@ function deduplicarGruposDaCampanha(grupos) {
     const lista = [];
 
     for (const g of grupos) {
-        const chaveNome = normalizarNomeParaComparacao(g.name);
-        const chaveGid = g.gid && g.gid.includes('@g.us') ? g.gid : null;
+        const idValido = String(g.id || g._id || '').trim();
+        const gidPuro = extrairGidPuro(g.gid || g.jid || g.id);
+        const inviteValido = g.inviteCode && String(g.inviteCode).trim().length > 3 ? String(g.inviteCode).trim() : null;
 
         const existente = lista.find(item => {
-            if (chaveGid && item.gid && item.gid === chaveGid) return true;
-            if (chaveNome && normalizarNomeParaComparacao(item.name) === chaveNome) return true;
+            const itemId = String(item.id || item._id || '').trim();
+            // 1. Mesmo ID único do SendFlow
+            if (idValido && itemId && idValido === itemId) return true;
+            // 2. Mesmo GID ou JID do WhatsApp (numérico com pelo menos 10 dígitos)
+            const itemGidPuro = extrairGidPuro(item.gid || item.jid || item.id);
+            if (gidPuro && itemGidPuro && gidPuro.length >= 10 && gidPuro === itemGidPuro) return true;
+            // 3. Mesmo link/código de convite único do WhatsApp
+            if (inviteValido && item.inviteCode && String(item.inviteCode).trim() === inviteValido) return true;
             return false;
         });
 
@@ -388,8 +395,8 @@ async function sincronizarCampanhasSendflow(forcar = false) {
                         .filter(g => !ignoradosSet.has(g.id) && !ignoradosSet.has(g.gid) && !ignoradosSet.has(g.name));
 
                     // Mescla grupos da API com eventuais grupos adicionados manualmente na aba SendFlow
-                    const gidsApi = new Set(gruposApi.map(x => x.gid || x.jid || x.name).filter(Boolean));
-                    const manuaisExtras = gruposManuais.filter(m => !gidsApi.has(m.gid) && !gidsApi.has(m.name));
+                    const idsApi = new Set(gruposApi.map(x => x.id || extrairGidPuro(x.gid || x.jid)).filter(Boolean));
+                    const manuaisExtras = gruposManuais.filter(m => !idsApi.has(m.id) && !idsApi.has(extrairGidPuro(m.gid || m.jid)));
                     gruposFinais = deduplicarGruposDaCampanha([...gruposApi, ...manuaisExtras]);
                 } else if (resGrupos.statusCode === 403 || resGrupos.statusCode === 429) {
                     bateuRateLimitGrupos = true;
@@ -496,8 +503,8 @@ async function sincronizarGruposCampanha(releaseId) {
             })) : []
         }));
 
-        const gidsApi = new Set(gruposApi.map(x => x.gid || x.jid || x.name).filter(Boolean));
-        const manuaisExtras = gruposManuais.filter(m => !gidsApi.has(m.gid) && !gidsApi.has(m.name));
+        const idsApi = new Set(gruposApi.map(x => x.id || extrairGidPuro(x.gid || x.jid)).filter(Boolean));
+        const manuaisExtras = gruposManuais.filter(m => !idsApi.has(m.id) && !idsApi.has(extrairGidPuro(m.gid || m.jid)));
 
         camp.grupos = deduplicarGruposDaCampanha([...gruposApi, ...manuaisExtras]);
         camp.totalGrupos = camp.grupos.length;
