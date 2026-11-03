@@ -237,8 +237,10 @@ function carregarCampanhasLocais() {
                     const antes = Array.isArray(c.grupos) ? c.grupos.length : 0;
                     const gruposLimpos = deduplicarGruposDaCampanha(c.grupos);
                     if (gruposLimpos.length !== antes) teveDeduplicacao = true;
+                    const ehPassada = /PES-SET-26|TESTE MENSAGENS/i.test(c.name || '');
                     return {
                         ...c,
+                        archived: Boolean(c.archived || ehPassada),
                         grupos: gruposLimpos,
                         totalGrupos: gruposLimpos.length
                     };
@@ -854,9 +856,80 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
         }
     }
 
-    // REGRA ABSOLUTA DO USUÁRIO:
-    // O sistema DEVE olhar apenas para os grupos cadastrados na aba do SendFlow (camp.grupos).
-    // Qualquer grupo antigo, passado ou não presente em camp.grupos é estritamente ignorado (retorna null).
+    // 3. Reconhecimento estrito por nome ou tag da campanha ativa no SendFlow
+    // Reconhece grupos ativos como "#2 Projeto TJ-SP Pós-Edital" ou "Projeto INSS #226"
+    // e cadastra automaticamente em camp.grupos para auditoria e catraca
+    if (nomeLimpo) {
+        const removerAcentos = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const nomeNorm = removerAcentos(nomeLimpo);
+        const tagMatch = nomeLimpo.match(/\[(.*?)\]/);
+        const tagGrupo = tagMatch ? tagMatch[1].trim().toLowerCase() : null;
+
+        let melhorCamp = null;
+        let melhorTamanho = 0;
+
+        for (const camp of cacheCampanhas.campanhas) {
+            if (camp.archived) continue;
+            if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || camp.gruposIgnorados.includes(nomeLimpo))) {
+                continue;
+            }
+
+            const tagCampMatch = String(camp.name || '').match(/\[(.*?)\]/);
+            const tagCamp = tagCampMatch ? tagCampMatch[1].trim().toLowerCase() : null;
+
+            // Se o grupo tem tag e a campanha tem tag diferente, não mistura
+            if (tagGrupo && tagCamp && tagGrupo !== tagCamp) continue;
+
+            // 3.1. Tag entre colchetes idêntica (ex: [PES-PPE-26], [PI-NOV-26], [BV-26])
+            if (tagCamp && tagCamp.length >= 3 && (nomeNorm.includes('[' + tagCamp + ']') || nomeNorm.includes(tagCamp))) {
+                melhorCamp = camp;
+                break;
+            }
+
+            // 3.2. Nome base específico da campanha ativa (ex: "projeto tj-sp pos-edital", "projeto inss")
+            const campBase = removerAcentos(String(camp.name || '').replace(/\[.*?\]/g, '').trim());
+            if (campBase.length >= 6 && nomeNorm.includes(campBase)) {
+                if (campBase.length > melhorTamanho) {
+                    melhorTamanho = campBase.length;
+                    melhorCamp = camp;
+                }
+            }
+        }
+
+        if (melhorCamp) {
+            if (!Array.isArray(melhorCamp.grupos)) melhorCamp.grupos = [];
+            const jaCadastrado = melhorCamp.grupos.some(x => {
+                const xGidPuro = extrairGidPuro(x.gid || x.jid || x.id);
+                return (gidPuroAlvo && xGidPuro && gidPuroAlvo === xGidPuro) || (x.name && x.name === nomeLimpo);
+            });
+
+            if (!jaCadastrado) {
+                melhorCamp.grupos.push({
+                    id: idLimpo || nomeLimpo,
+                    name: nomeLimpo,
+                    gid: idLimpo && idLimpo.includes('@g.us') ? idLimpo : '',
+                    jid: idLimpo && idLimpo.includes('@g.us') ? idLimpo : '',
+                    inviteCode: '',
+                    full: false,
+                    participantsAmount: participantsAmount || 0,
+                    origem: 'Auto-SendFlow'
+                });
+                melhorCamp.totalGrupos = melhorCamp.grupos.length;
+                cacheCampanhas.totalGrupos = cacheCampanhas.campanhas.reduce((acc, c) => acc + (c.grupos?.length || 0), 0);
+                salvarCampanhasLocais();
+            }
+
+            return {
+                releaseId: melhorCamp.id,
+                nomeCampanha: melhorCamp.name,
+                idGrupo: idLimpo || nomeLimpo,
+                nomeGrupo: nomeLimpo,
+                campanhaObj: melhorCamp
+            };
+        }
+    }
+
+    // Grupos que não pertencem a nenhuma campanha ativa do SendFlow são ignorados
     return null;
 }
 
