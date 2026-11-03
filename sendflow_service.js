@@ -237,10 +237,9 @@ function carregarCampanhasLocais() {
                     const antes = Array.isArray(c.grupos) ? c.grupos.length : 0;
                     const gruposLimpos = deduplicarGruposDaCampanha(c.grupos);
                     if (gruposLimpos.length !== antes) teveDeduplicacao = true;
-                    const ehPassada = /PES-SET-26|TESTE MENSAGENS/i.test(c.name || '');
                     return {
                         ...c,
-                        archived: Boolean(c.archived || ehPassada),
+                        archived: Boolean(c.archived),
                         grupos: gruposLimpos,
                         totalGrupos: gruposLimpos.length
                     };
@@ -856,9 +855,8 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
         }
     }
 
-    // 3. Reconhecimento estrito por nome ou tag da campanha ativa no SendFlow
-    // Reconhece grupos ativos como "#2 Projeto TJ-SP Pós-Edital" ou "Projeto INSS #226"
-    // e cadastra automaticamente em camp.grupos para auditoria e catraca
+    // 3. Reconhecimento DINÂMICO e UNIVERSAL para QUALQUER campanha ativa do SendFlow
+    // Lê dinamicamente qualquer campanha em andamento e cadastra automaticamente em camp.grupos
     if (nomeLimpo) {
         const removerAcentos = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
         const nomeNorm = removerAcentos(nomeLimpo);
@@ -880,15 +878,15 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
             // Se o grupo tem tag e a campanha tem tag diferente, não mistura
             if (tagGrupo && tagCamp && tagGrupo !== tagCamp) continue;
 
-            // 3.1. Tag entre colchetes idêntica (ex: [PES-PPE-26], [PI-NOV-26], [BV-26])
+            // 3.1. Tag entre colchetes idêntica
             if (tagCamp && tagCamp.length >= 3 && (nomeNorm.includes('[' + tagCamp + ']') || nomeNorm.includes(tagCamp))) {
                 melhorCamp = camp;
                 break;
             }
 
-            // 3.2. Nome base específico da campanha ativa (ex: "projeto tj-sp pos-edital", "projeto inss")
+            // 3.2. Nome base específico de qualquer campanha ativa
             const campBase = removerAcentos(String(camp.name || '').replace(/\[.*?\]/g, '').trim());
-            if (campBase.length >= 6 && nomeNorm.includes(campBase)) {
+            if (campBase.length >= 5 && nomeNorm.includes(campBase)) {
                 if (campBase.length > melhorTamanho) {
                     melhorTamanho = campBase.length;
                     melhorCamp = camp;
