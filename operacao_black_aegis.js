@@ -1559,7 +1559,19 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
     for (const [idNorm, setGrupos] of Array.from(mapaPresenca.entries())) {
         if (!setGrupos || setGrupos.size === 0) continue;
 
-        // Recupera o número real e JID do participante
+        // ⚡ OTIMIZAÇÃO CRÍTICA DE CPU (Curto-circuito em O(1)):
+        // A imensa maioria dos leads (99.9%) está dentro do limite de grupos da campanha
+        // e não cometeu nenhuma infração. Se está em <= limiteMax grupos, não está na blacklist
+        // e não é crocodilo registrado, pula INSTANTANEAMENTE sem varrer arrays de participantes!
+        const ehBlacklist = estaNaBlacklist(idNorm);
+        const crocodiloReg = !ehBlacklist && Boolean(obterCrocodilo(idNorm, idCampanha));
+        const totalGeral = setGrupos.size > 1 ? calcularTotalGruposGeral(idNorm) : setGrupos.size;
+
+        if (setGrupos.size <= limiteMax && totalGeral <= limiteBan && !ehBlacklist && !crocodiloReg) {
+            continue;
+        }
+
+        // Recupera o número real e JID do participante apenas para os que realmente precisam de auditoria
         let numReal = null;
         let jidOriginal = null;
         const lidsConhecidos = mapaTelefoneParaLids.get(idNorm) || new Set();
@@ -2273,6 +2285,14 @@ async function executarLimpezaInicial() {
     const limiteMax = configAtual.limiteGruposPorCampanha;
     const limiteBan = configAtual.limiteBanPermanente;
 
+    // 0. Sincroniza campanhas e grupos ativos direto da API SendFlow para garantir que novas campanhas entrem
+    try {
+        console.log('[🔄 VARREDURA GERAL] Sincronizando campanhas e grupos ativos direto da API SendFlow...');
+        await sincronizarCampanhasSendflow(true);
+    } catch (e) {
+        console.warn('[⚠️ VARREDURA GERAL] Aviso ao sincronizar com SendFlow:', e?.message || e);
+    }
+
     const cacheSendflow = getCacheCampanhas();
     const totalCampAtivas = cacheSendflow.totalCampanhasAtivas || 0;
 
@@ -2288,9 +2308,16 @@ async function executarLimpezaInicial() {
     mapaPresencaPorCampanha.clear();
 
     const snipersOperacionais = snipersAtivos.filter(sniperEstaOperacional);
-    // Mapeamento seguro: o 1º ADM operacional mapeia os grupos e já unifica participantes e permissões de todos os ADMs sem risco de rate-limit
+    // Mapeamento seguro: percorre TODOS os ADMs operacionais conectados para consolidar grupos de toda a frota
     if (snipersOperacionais.length > 0) {
-        await executarMapeamentoDiretoDoSniper(snipersOperacionais[0], true);
+        console.log(`[🔍 VARREDURA GERAL] Mapeando grupos de todos os ${snipersOperacionais.length} ADMs conectados...`);
+        for (let i = 0; i < snipersOperacionais.length; i++) {
+            const op = snipersOperacionais[i];
+            await executarMapeamentoDiretoDoSniper(op, true);
+            if (i < snipersOperacionais.length - 1) {
+                await sleep(2000); // 2s de respiro seguro entre consultas de diferentes ADMs
+            }
+        }
     }
 
     console.log(`\n👑 Total de Administradores globais protegidos: ${adminsGlobais.size}`);
@@ -2363,7 +2390,13 @@ async function executarLimpezaInicial() {
         for (const [idN, dados] of mapaAlvos.entries()) {
             if (dados.ehAdmin || dados.ehWhitelist) continue;
 
-            const totalGeral = calcularTotalGruposGeral(idN);
+            // ⚡ OTIMIZAÇÃO CRÍTICA DE CPU: se o lead está em apenas 1 grupo e não está na blacklist/restritos, pula na hora
+            if (dados.grupos.length <= 1 && !dados.ehBlacklist) {
+                const restritoExistente = obterCrocodilo(dados.numero, idCampanha);
+                if (!restritoExistente) continue;
+            }
+
+            const totalGeral = dados.grupos.length > 1 ? calcularTotalGruposGeral(idN) : dados.grupos.length;
             const excedeuLimiteBan = dados.grupos.length > limiteBan || totalGeral > limiteBan;
 
             if (excedeuLimiteBan || dados.ehBlacklist) {
@@ -2994,10 +3027,11 @@ async function executarPatrulhaContinua() {
 
 function iniciarPatrulhaContinua() {
     if (intervaloPatrulhaContinua) clearInterval(intervaloPatrulhaContinua);
-    // A cada 30 segundos, verifica integridade dos sockets, faz failover e audita todos os grupos SendFlow
+    // A cada 5 minutos (300s), verifica integridade dos sockets, faz failover e audita todos os grupos SendFlow
+    // (As entradas em tempo real continuam 100% instantâneas via eventos da Catraca 24/7)
     intervaloPatrulhaContinua = setInterval(() => {
         executarPatrulhaContinua().catch(() => {});
-    }, 30 * 1000);
+    }, 5 * 60 * 1000);
 }
 
 // =====================================================================

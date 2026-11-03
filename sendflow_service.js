@@ -353,8 +353,13 @@ async function sincronizarCampanhasSendflow(forcar = false) {
         }
 
         const todasReleases = resReleases.data;
-        // Campanhas ATIVAS (não arquivadas)
-        const ativas = todasReleases.filter(r => !r.archived);
+        // Campanhas ATIVAS (não arquivadas e excluindo campanhas de meses passados como SET-26 e AGO-26)
+        const ativas = todasReleases.filter(r => {
+            if (r.archived) return false;
+            const nomeU = String(r.name || '').toUpperCase();
+            if (nomeU.includes('SET-26') || nomeU.includes('AGO-26') || nomeU.includes('JUL-26')) return false;
+            return true;
+        });
 
         console.log(`[🎯 SENDFLOW] ${todasReleases.length} campanhas no total | ${ativas.length} campanhas ATIVAS encontradas.`);
 
@@ -777,6 +782,8 @@ function extrairGidPuro(raw) {
 // Verifica se uma campanha do SendFlow está ativa para monitoramento
 function campanhaEstaVinculadaComAdm(camp) {
     if (!camp || camp.archived) return false;
+    const nomeU = String(camp.name || '').toUpperCase();
+    if (nomeU.includes('SET-26') || nomeU.includes('AGO-26') || nomeU.includes('JUL-26')) return false;
     return true;
 }
 
@@ -867,7 +874,7 @@ function obterInfoGrupoCampanha(idGrupo, subject, participantsAmount = 0) {
         let melhorTamanho = 0;
 
         for (const camp of cacheCampanhas.campanhas) {
-            if (camp.archived) continue;
+            if (!campanhaEstaVinculadaComAdm(camp)) continue;
             if (Array.isArray(camp.gruposIgnorados) && (camp.gruposIgnorados.includes(idLimpo) || camp.gruposIgnorados.includes(nomeLimpo))) {
                 continue;
             }

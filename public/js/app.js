@@ -2196,9 +2196,9 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarConfiguracoes();
     carregarFeedEventos();
 
-    // Polling contínuo
+    // Polling contínuo otimizado para baixo consumo de CPU e requisições
     pollingInterval = setInterval(() => {
         carregarStatusGeral();
         carregarFeedEventos();
-    }, 3500);
+    }, 7500);
 });
