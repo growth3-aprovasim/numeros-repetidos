@@ -2146,6 +2146,45 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
+    // 🔍 DISPARO MANUAL DE VARREDURA GERAL (AUDITORIA DE DUPLICADOS)
+    // =================================================================
+    async function dispararVarreduraGeral() {
+        const confirmar = confirm('Deseja iniciar a Varredura Geral agora?\n\nO sistema vai ler os membros de todos os grupos ativos nas campanhas do SendFlow e enfileirar a expulsão de quem estiver em mais de 4 grupos.');
+        if (!confirmar) return;
+
+        const btnTop = document.getElementById('btn-auditar-geral');
+        const btnCroco = document.getElementById('btn-auditar-crocodilos');
+        if (btnTop) btnTop.disabled = true;
+        if (btnCroco) btnCroco.disabled = true;
+
+        showToast('Iniciando Varredura Geral...', 'info');
+
+        try {
+            const res = await fetch('/api/auditar-geral', { method: 'POST' });
+            const data = await res.json();
+            if (data.sucesso) {
+                showToast(data.mensagem || 'Varredura geral iniciada!', 'success');
+                setTimeout(() => {
+                    carregarStatusGeral();
+                    carregarCrocodilos();
+                    carregarBlacklist();
+                    carregarFeedEventos();
+                }, 3000);
+            } else {
+                showToast(data.erro || 'Falha ao iniciar varredura.', 'error');
+            }
+        } catch (e) {
+            showToast('Erro ao comunicar com o servidor: ' + e.message, 'error');
+        } finally {
+            if (btnTop) btnTop.disabled = false;
+            if (btnCroco) btnCroco.disabled = false;
+        }
+    }
+
+    document.getElementById('btn-auditar-geral')?.addEventListener('click', dispararVarreduraGeral);
+    document.getElementById('btn-auditar-crocodilos')?.addEventListener('click', dispararVarreduraGeral);
+
+    // =================================================================
     // 🚀 BOOTSTRAP INICIAL & POLLING PERIÓDICO
     // =================================================================
     carregarStatusGeral();

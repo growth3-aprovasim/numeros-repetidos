@@ -3093,6 +3093,7 @@ module.exports = {
     registrarCrocodilo,
     removerCrocodilo,
     auditarSaturacaoECrocodilos,
+    executarLimpezaInicial,
     executarPatrulhaContinua,
     autoSalvarBackupSessoes,
     normalizarID,

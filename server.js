@@ -23,6 +23,7 @@ const {
     carregarCrocodilos,
     removerCrocodilo,
     executarPatrulhaContinua,
+    executarLimpezaInicial,
     autoSalvarBackupSessoes,
     DATA_DIR,
     obterStatusAdms,
@@ -383,6 +384,22 @@ const desbanirHandler = (req, res) => {
 app.delete('/api/blacklist/:numero', desbanirHandler);
 app.post('/api/blacklist/:numero/desbanir', desbanirHandler);
 app.post('/api/blacklist/desbanir', desbanirHandler);
+
+// 🔍 DISPARO MANUAL DE VARREDURA / AUDITORIA GERAL DE DUPLICADOS
+app.post('/api/auditar-geral', async (req, res) => {
+    try {
+        console.log('\n[🔍 PAINEL WEB] Varredura Geral manual solicitada pelo usuário...');
+        executarLimpezaInicial().catch(err => {
+            console.error('[!] Erro na execução da varredura geral manual:', err.message);
+        });
+        res.json({
+            sucesso: true,
+            mensagem: 'Varredura geral iniciada! O sistema está mapeando os membros de todos os grupos e enfileirando a expulsão dos excedentes (> 4 grupos).'
+        });
+    } catch (err) {
+        res.status(500).json({ sucesso: false, erro: err.message });
+    }
+});
 
 // 🔒 ROTAS: LEADS RESTRITOS (EXCEDENTES COM > 4 GRUPOS)
 app.get('/api/crocodilos', (req, res) => {
