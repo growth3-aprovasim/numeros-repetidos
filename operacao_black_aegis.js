@@ -1565,9 +1565,9 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
         // e não é crocodilo registrado, pula INSTANTANEAMENTE sem varrer arrays de participantes!
         const ehBlacklist = estaNaBlacklist(idNorm);
         const crocodiloReg = !ehBlacklist && Boolean(obterCrocodilo(idNorm, idCampanha));
-        const totalGeral = setGrupos.size > 1 ? calcularTotalGruposGeral(idNorm) : setGrupos.size;
 
-        if (setGrupos.size <= limiteMax && totalGeral <= limiteBan && !ehBlacklist && !crocodiloReg) {
+        // Regra avaliada estritamente por campanha/lançamento:
+        if (setGrupos.size <= limiteMax && setGrupos.size <= limiteBan && !ehBlacklist && !crocodiloReg) {
             continue;
         }
 
@@ -1594,20 +1594,18 @@ async function auditarSaturacaoECrocodilos(idCampanha) {
         if (estaNaWhitelist(numReal, snipersAtivos) || estaNaWhitelist(idNorm, snipersAtivos)) continue;
         if (adminsGlobais.has(numReal) || adminsGlobais.has(idNorm)) continue;
 
-        const totalLinksGeral = calcularTotalGruposGeral(idNorm);
-
-        // REGRA 1: Ban Permanente (Blacklist ou > limiteBan) — vale mesmo que esteja em 1 único grupo!
-        if (totalLinksGeral > limiteBan || setGrupos.size > limiteBan || estaNaBlacklist(numReal) || estaNaBlacklist(idNorm)) {
-            console.log(`⛔ [AUDITORIA - BAN PERMANENTE] Lead ${numReal} detectado em ${setGrupos.size} grupo(s) de "${nomeCampanha}"! Removendo de TODOS.`);
-            adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${formatarExibicao(numReal)} banido permanentemente! Expulsando de todos os grupos.`);
+        // REGRA 1: Ban Permanente (Blacklist ou > limiteBan dentro DESTA CAMPANHA)
+        if (setGrupos.size > limiteBan || estaNaBlacklist(numReal) || estaNaBlacklist(idNorm)) {
+            console.log(`⛔ [AUDITORIA - BAN PERMANENTE] Lead ${numReal} atingiu ${setGrupos.size} grupos em "${nomeCampanha}" (> limite ${limiteBan})! Removendo.`);
+            adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${formatarExibicao(numReal)} banido permanentemente (${setGrupos.size} grps em ${nomeCampanha})!`);
 
             if (!estaNaBlacklist(numReal)) {
                 cacheBlacklist.unshift({
                     numero: numReal,
                     numeroFormatado: formatarExibicao(numReal),
-                    motivo: `Encontrado em ${Math.max(setGrupos.size, totalLinksGeral)} grupos no escaneamento (Limite permitido: ${limiteBan})`,
+                    motivo: `Atingiu ${setGrupos.size} grupos no lançamento "${nomeCampanha}" (Limite permitido: ${limiteBan})`,
                     dataBanimento: new Date().toISOString(),
-                    totalGrupos: Math.max(setGrupos.size, totalLinksGeral)
+                    totalGrupos: setGrupos.size
                 });
                 salvarBlacklist(cacheBlacklist);
             }
@@ -2396,16 +2394,15 @@ async function executarLimpezaInicial() {
                 if (!restritoExistente) continue;
             }
 
-            const totalGeral = dados.grupos.length > 1 ? calcularTotalGruposGeral(idN) : dados.grupos.length;
-            const excedeuLimiteBan = dados.grupos.length > limiteBan || totalGeral > limiteBan;
+            const excedeuLimiteBan = dados.grupos.length > limiteBan;
 
             if (excedeuLimiteBan || dados.ehBlacklist) {
                 const motivoBan = dados.ehBlacklist
                     ? 'Presente na Blacklist Permanente'
-                    : `Detectado em ${Math.max(dados.grupos.length, totalGeral)} links (Limite permitido: ${limiteBan})`;
+                    : `Detectado em ${dados.grupos.length} links na campanha "${nomeCampanha}" (Limite permitido: ${limiteBan})`;
 
-                console.log(`⛔ [BAN PERMANENTE] Lead ${dados.numero} (${dados.grupos.length} grupos em ${nomeCampanha} | Total: ${totalGeral}). Motivo: ${motivoBan}. Será removido de TODOS os grupos!`);
-                adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${dados.numero} banido permanentemente (${dados.grupos.length} grps). Expulsando de TODOS os grupos sem exceção!`);
+                console.log(`⛔ [BAN PERMANENTE] Lead ${dados.numero} (${dados.grupos.length} grupos em ${nomeCampanha}). Motivo: ${motivoBan}. Será removido!`);
+                adicionarEventoFeed('BAN_PERMANENTE', `⛔ Lead ${dados.numero} banido da campanha "${nomeCampanha}" (${dados.grupos.length} grps). Expulsando dos grupos!`);
 
                 if (!estaNaBlacklist(dados.numero)) {
                     cacheBlacklist.unshift({
@@ -2413,7 +2410,7 @@ async function executarLimpezaInicial() {
                         numeroFormatado: formatarExibicao(dados.numero),
                         motivo: motivoBan,
                         dataBanimento: new Date().toISOString(),
-                        totalGrupos: Math.max(dados.grupos.length, totalGeral)
+                        totalGrupos: dados.grupos.length
                     });
                     salvarBlacklist(cacheBlacklist);
                 }
@@ -2875,29 +2872,26 @@ function vincularListenersRealtime(sniper) {
             const limiteMax = configAtual.limiteGruposPorCampanha;
             const limiteBan = configAtual.limiteBanPermanente;
 
-            console.log(`🚪 [CATRACA] Lead ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}). Presença na campanha: ${gruposDoLead.size}/${limiteMax} permitidos. Total de links geral: ${totalLinksGeral}.`);
-            adicionarEventoFeed('ENTRADA', `🚪 Lead ${formatarExibicao(numReal)} entrou em "${nomeGrupo}" [${gruposDoLead.size}/${limiteMax} na campanha | Total geral: ${totalLinksGeral}]`);
+            console.log(`🚪 [CATRACA] Lead ${numReal} entrou em "${nomeGrupo}" (${tagCampanha}). Presença no lançamento: ${gruposDoLead.size}/${limiteMax} permitidos.`);
+            adicionarEventoFeed('ENTRADA', `🚪 Lead ${formatarExibicao(numReal)} entrou em "${nomeGrupo}" [${gruposDoLead.size}/${limiteMax} em ${tagCampanha}]`);
 
-            // 💀 REGRA 3: BAN PERMANENTE SE ULTRAPASSAR O LIMITE DE LINKS (> limiteBan)
-            if (totalLinksGeral > limiteBan || gruposDoLead.size > limiteBan) {
-                console.log(`\n🚨💀 [CATRACA - BAN PERMANENTE ATIVADO] Lead ${numReal} atingiu ${totalLinksGeral} links (> limite ${limiteBan})!`);
-                adicionarEventoFeed('BAN_PERMANENTE', `💀 [BAN PERMANENTE ATIVADO] ${formatarExibicao(numReal)} atingiu ${totalLinksGeral} links (> limite ${limiteBan}). Banido e expulso de TODOS os grupos!`);
+            // 💀 REGRA 3: BAN PERMANENTE SE ULTRAPASSAR O LIMITE DE LINKS NO LANÇAMENTO (> limiteBan)
+            if (gruposDoLead.size > limiteBan) {
+                console.log(`\n🚨💀 [CATRACA - BAN PERMANENTE ATIVADO] Lead ${numReal} atingiu ${gruposDoLead.size} links em "${tagCampanha}" (> limite ${limiteBan})!`);
+                adicionarEventoFeed('BAN_PERMANENTE', `💀 [BAN PERMANENTE ATIVADO] ${formatarExibicao(numReal)} atingiu ${gruposDoLead.size} links em "${tagCampanha}" (> limite ${limiteBan}). Banido e expulso!`);
 
                 if (!estaNaBlacklist(numReal)) {
                     cacheBlacklist.unshift({
                         numero: numReal,
                         numeroFormatado: formatarExibicao(numReal),
-                        motivo: `Atingiu ${totalLinksGeral} links/grupos em tempo real (Limite máximo: ${limiteBan})`,
+                        motivo: `Atingiu ${gruposDoLead.size} links/grupos em "${tagCampanha}" (Limite máximo: ${limiteBan})`,
                         dataBanimento: new Date().toISOString(),
-                        totalGrupos: totalLinksGeral
+                        totalGrupos: gruposDoLead.size
                     });
                     salvarBlacklist(cacheBlacklist);
                 }
 
-                const todosGruposDoLead = obterTodosGruposDoLead(idNorm);
-                todosGruposDoLead.add(idGrupo);
-
-                for (const gid of todosGruposDoLead) {
+                for (const gid of Array.from(gruposDoLead)) {
                     enfileirarKickRealtime({
                         idGrupo: gid,
                         nomeGrupo: obterNomeGrupo(gid),
